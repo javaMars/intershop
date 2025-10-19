@@ -4,35 +4,40 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.mymarket.dto.Item;
 import ru.yandex.practicum.mymarket.dto.PagingWrapper;
 import ru.yandex.practicum.mymarket.service.ProductServiceImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 public class ProductController {
     private final ProductServiceImpl productService;
 
-    public ProductController(ProductServiceImpl productService){
+    public ProductController(ProductServiceImpl productService) {
         this.productService = productService;
     }
 
     @GetMapping("/items")
-    public String getItems(@RequestParam(required = false, defaultValue = "") String search,
+    public String viewItems(@RequestParam(required = false, defaultValue = "") String search,
                            @RequestParam(required = false, defaultValue = "NO") String sort,
                            @RequestParam(required = false, defaultValue = "1") int pageNumber,
                            @RequestParam(required = false, defaultValue = "5") int pageSize,
                            Model model) {
 
-        int pageIndex = Math.max(pageNumber - 1, 0);
+        int pageIndex = Math.max(pageNumber, 0);
 
         Pageable pageable = switch (sort.toUpperCase()) {
             case "ALPHA" -> PageRequest.of(pageIndex, pageSize, Sort.by("title").ascending());
@@ -53,7 +58,7 @@ public class ProductController {
         List<List<Item>> itemsByGroup = new ArrayList<>();
         for (int i = 0; i < filteredItems.size(); i += 3) {
             List<Item> partItems = new ArrayList<>(filteredItems.subList(i, Math.min(i + 3, filteredItems.size())));
-            while (partItems.size() < 3 ){
+            while (partItems.size() < 3) {
                 partItems.add(new Item(-1L, "", "", "", 0L, 0)); // заглушка
             }
             itemsByGroup.add(partItems);
@@ -67,8 +72,49 @@ public class ProductController {
         return "items";
     }
 
+    @PostMapping("/items")
+    public String editCountItem(
+            @RequestParam Long id,
+            @RequestParam(required = false, defaultValue = "") String search,
+            @RequestParam(required = false, defaultValue = "NO") String sort,
+            @RequestParam(required = false, defaultValue = "1") int pageNumber,
+            @RequestParam(required = false, defaultValue = "5") int pageSize,
+            @RequestParam String action) {
+
+        switch (action.toUpperCase()) {
+            case "MINUS" -> productService.decreaseItemCount(id);
+            case "PLUS" ->  productService.increaseItemCount(id);
+            default -> throw new IllegalArgumentException("Некорректно указано действие: " + action);
+        }
+
+        return String.format("redirect:/items?search=%s&sort=%s&pageNumber=%d&pageSize=%d",
+                search, sort, pageNumber, pageSize);
+    }
+
     @GetMapping("/items/{id}")
-    public String viewItem(@PathVariable Long id, HttpServletRequest request, Model model) throws IllegalArgumentException{
-        Item item =
+    public String viewItem(@PathVariable Long id, Model model) throws IllegalArgumentException{
+        Optional<Item> optionalItem = productService.findById(id);
+
+        model.addAttribute("item", optionalItem.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")));
+        return "item";
+    }
+
+    @PostMapping("/items/{id}")
+    public String editItemCount(
+            @PathVariable Long id,
+            @RequestParam String action,
+            Model model) {
+
+        switch (action.toUpperCase()) {
+            case "MINUS" -> productService.decreaseItemCount(id);
+            case "PLUS" ->  productService.increaseItemCount(id);
+            default -> throw new IllegalArgumentException("Некорректно указано действие: " + action);
+        }
+
+        Item item = productService.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден"));
+
+        model.addAttribute("item", item);
+        return "item";
     }
 }

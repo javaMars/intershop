@@ -12,7 +12,9 @@ public interface ProductRepository extends PagingAndSortingRepository<Item, Long
     @NonNull
     Page<Item> findAll(@NonNull Pageable pageable);
 
-    Page<Item> findByTitle(String title, Pageable pageable);
+    Page<Item> findByTitleContainingIgnoreCase(String title, Pageable pageable);
 
     Optional<Item> findById(Long id);
+
+    void save(Item item);
 }

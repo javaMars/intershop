@@ -1,13 +1,7 @@
 package ru.yandex.practicum.mymarket.dto;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 
-@Setter
-@Getter
-@AllArgsConstructor
 @Entity
 @Table(name = "items")
 public class Item {
@@ -24,4 +18,60 @@ public class Item {
     private long price;
     @Column
     private int count;
+
+    public Item() {
+    }
+
+    public Item(long id, String title, String description, String imgPath, long price, int count) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.imgPath = imgPath;
+        this.price = price;
+        this.count = count;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public long getPrice() {
+        return price;
+    }
+
+    public void setPrice(long price) {
+        this.price = price;
+    }
+
+    public String getImgPath() {
+        return imgPath;
+    }
+
+    public void setImgPath(String imgPath) {
+        this.imgPath = imgPath;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public long getId() {
+        return id;
+    }
 }
