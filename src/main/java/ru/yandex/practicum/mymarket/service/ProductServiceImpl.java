@@ -33,7 +33,7 @@ public class ProductServiceImpl implements ProductService{
     public void handleItemAction(Long itemId, String action) {
         String normalizedAction = Optional.ofNullable(action)
                 .map(String::toUpperCase)
-                .filter(actionFilter -> List.of("MINUS", "PLUS").contains(actionFilter))
+                .filter(actionFilter -> List.of("MINUS", "PLUS", "DELETE").contains(actionFilter))
                 .orElseThrow(() -> new IllegalArgumentException("Некорректно указано действие: " + action));
 
         if ("MINUS".equals(normalizedAction)) {

@@ -34,7 +34,7 @@ public class ProductController {
     @GetMapping("/items")
     public String viewItems(@RequestParam(required = false, defaultValue = "") String search,
                            @RequestParam(required = false, defaultValue = "NO") String sort,
-                           @RequestParam(required = false, defaultValue = "1") int pageNumber,
+                           @RequestParam(required = false, defaultValue = "0") int pageNumber,
                            @RequestParam(required = false, defaultValue = "5") int pageSize,
                            Model model) {
 
@@ -80,7 +80,7 @@ public class ProductController {
             @RequestParam Long id,
             @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(required = false, defaultValue = "NO") String sort,
-            @RequestParam(required = false, defaultValue = "1") int pageNumber,
+            @RequestParam(required = false, defaultValue = "0") int pageNumber,
             @RequestParam(required = false, defaultValue = "5") int pageSize,
             @RequestParam String action) {
 

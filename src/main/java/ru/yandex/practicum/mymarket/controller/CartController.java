@@ -41,10 +41,19 @@ public class CartController {
             @RequestParam("action") String action,
             Model model
     ) {
-        productService.handleItemAction(itemId, action);
+        try {
+            productService.handleItemAction(itemId, action);
+        } catch (Exception e) {
+            model.addAttribute("error", "Ошибка при обработке действия");
+        }
 
         List<Item> cartItems = productService.getCartItems();
-        model.addAttribute("cartItems", cartItems);
+        long total = cartItems.stream()
+                .mapToLong(item -> item.getPrice() * item.getCount())
+                .sum();
+
+        model.addAttribute("items", cartItems);
+        model.addAttribute("total", total);
 
         return "cart";
     }
