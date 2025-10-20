@@ -14,20 +14,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.mymarket.dto.Item;
 import ru.yandex.practicum.mymarket.dto.PagingWrapper;
-import ru.yandex.practicum.mymarket.service.ProductServiceImpl;
+import ru.yandex.practicum.mymarket.service.ProductService;
 
 import java.util.*;
 
 @Controller
 public class ProductController {
-    private final ProductServiceImpl productService;
+    private final ProductService productService;
 
     private static final Map<String, Sort> SORT_STRATEGIES = Map.of(
             "ALPHA", Sort.by("title").ascending(),
             "PRICE", Sort.by("price").ascending()
     );
 
-    public ProductController(ProductServiceImpl productService) {
+    public ProductController(ProductService productService) {
         this.productService = productService;
     }
 

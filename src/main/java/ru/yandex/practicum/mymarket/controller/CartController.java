@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import ru.yandex.practicum.mymarket.dto.Item;
-import ru.yandex.practicum.mymarket.service.ProductServiceImpl;
+import ru.yandex.practicum.mymarket.service.ProductService;
 
 import java.util.List;
 
@@ -15,9 +15,9 @@ import java.util.List;
 @RequestMapping("/cart/items")
 public class CartController {
 
-    private final ProductServiceImpl productService;
+    private final ProductService productService;
 
-    public CartController(ProductServiceImpl productService) {
+    public CartController(ProductService productService) {
         this.productService = productService;
     }
 
