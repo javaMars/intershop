@@ -16,15 +16,16 @@ import ru.yandex.practicum.mymarket.dto.Item;
 import ru.yandex.practicum.mymarket.dto.PagingWrapper;
 import ru.yandex.practicum.mymarket.service.ProductServiceImpl;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.*;
 
 @Controller
 public class ProductController {
     private final ProductServiceImpl productService;
+
+    private static final Map<String, Sort> SORT_STRATEGIES = Map.of(
+            "ALPHA", Sort.by("title").ascending(),
+            "PRICE", Sort.by("price").ascending()
+    );
 
     public ProductController(ProductServiceImpl productService) {
         this.productService = productService;
@@ -39,11 +40,13 @@ public class ProductController {
 
         int pageIndex = Math.max(pageNumber, 0);
 
-        Pageable pageable = switch (sort.toUpperCase()) {
-            case "ALPHA" -> PageRequest.of(pageIndex, pageSize, Sort.by("title").ascending());
-            case "PRICE" -> PageRequest.of(pageIndex, pageSize, Sort.by("price").ascending());
-            default -> PageRequest.of(pageIndex, pageSize);
-        };
+        String normalizedSort = (sort != null) ? sort.trim().toUpperCase() : null;
+        Sort sorting = (normalizedSort != null) ? SORT_STRATEGIES.get(normalizedSort) : null;
+
+        Pageable pageable = (sorting != null)
+                ? PageRequest.of(pageIndex, pageSize, sorting)
+                : PageRequest.of(pageIndex, pageSize);
+
 
         Page<Item> filteredItemsPage;
         if (search != null && !search.trim().isEmpty()) {
@@ -73,7 +76,7 @@ public class ProductController {
     }
 
     @PostMapping("/items")
-    public String editCountItem(
+    public String updateItemCount(
             @RequestParam Long id,
             @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(required = false, defaultValue = "NO") String sort,
@@ -81,11 +84,7 @@ public class ProductController {
             @RequestParam(required = false, defaultValue = "5") int pageSize,
             @RequestParam String action) {
 
-        switch (action.toUpperCase()) {
-            case "MINUS" -> productService.decreaseItemCount(id);
-            case "PLUS" ->  productService.increaseItemCount(id);
-            default -> throw new IllegalArgumentException("Некорректно указано действие: " + action);
-        }
+        productService.handleItemAction(id, action);
 
         return String.format("redirect:/items?search=%s&sort=%s&pageNumber=%d&pageSize=%d",
                 search, sort, pageNumber, pageSize);
@@ -100,16 +99,12 @@ public class ProductController {
     }
 
     @PostMapping("/items/{id}")
-    public String editItemCount(
+    public String updateItemCount(
             @PathVariable Long id,
             @RequestParam String action,
             Model model) {
 
-        switch (action.toUpperCase()) {
-            case "MINUS" -> productService.decreaseItemCount(id);
-            case "PLUS" ->  productService.increaseItemCount(id);
-            default -> throw new IllegalArgumentException("Некорректно указано действие: " + action);
-        }
+        productService.handleItemAction(id, action);
 
         Item item = productService.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден"));
