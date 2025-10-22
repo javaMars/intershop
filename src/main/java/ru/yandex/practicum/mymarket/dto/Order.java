@@ -2,6 +2,7 @@ package ru.yandex.practicum.mymarket.dto;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -10,14 +11,15 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
-            fetch = FetchType.LAZY
-    )
-    @JoinColumn(name = "item_id")
-    private List<Item> items;
-    @Column
-    private Long totalSum;
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private List<Item> items = new ArrayList<>();
+
+    public Order(){}
+    public Order(List<Item> items){
+        this.items = List.copyOf(items);;
+    }
+    public Long getId() { return id; }
+    public List<Item> getItems() { return items; }
 }

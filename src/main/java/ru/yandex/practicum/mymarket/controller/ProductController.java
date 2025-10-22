@@ -7,11 +7,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.yandex.practicum.mymarket.dto.Item;
 import ru.yandex.practicum.mymarket.dto.PagingWrapper;
 import ru.yandex.practicum.mymarket.service.ProductService;
@@ -19,6 +17,7 @@ import ru.yandex.practicum.mymarket.service.ProductService;
 import java.util.*;
 
 @Controller
+@RequestMapping("/items")
 public class ProductController {
     private final ProductService productService;
 
@@ -31,7 +30,7 @@ public class ProductController {
         this.productService = productService;
     }
 
-    @GetMapping("/items")
+    @GetMapping
     public String viewItems(@RequestParam(required = false, defaultValue = "") String search,
                            @RequestParam(required = false, defaultValue = "NO") String sort,
                            @RequestParam(required = false, defaultValue = "0") int pageNumber,
@@ -75,22 +74,26 @@ public class ProductController {
         return "items";
     }
 
-    @PostMapping("/items")
+    @PostMapping
     public String updateItemCount(
             @RequestParam Long id,
             @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(required = false, defaultValue = "NO") String sort,
             @RequestParam(required = false, defaultValue = "0") int pageNumber,
             @RequestParam(required = false, defaultValue = "5") int pageSize,
-            @RequestParam String action) {
+            @RequestParam String action, RedirectAttributes redirectAttributes) {
 
         productService.handleItemAction(id, action);
 
-        return String.format("redirect:/items?search=%s&sort=%s&pageNumber=%d&pageSize=%d",
-                search, sort, pageNumber, pageSize);
+        redirectAttributes.addAttribute("search", search);
+        redirectAttributes.addAttribute("sort", sort);
+        redirectAttributes.addAttribute("pageNumber", pageNumber);
+        redirectAttributes.addAttribute("pageSize", pageSize);
+
+        return "redirect:/items";
     }
 
-    @GetMapping("/items/{id}")
+    @GetMapping("/{id}")
     public String viewItem(@PathVariable Long id, Model model) throws IllegalArgumentException{
         Optional<Item> optionalItem = productService.findById(id);
 
@@ -98,7 +101,7 @@ public class ProductController {
         return "item";
     }
 
-    @PostMapping("/items/{id}")
+    @PostMapping("/{id}")
     public String updateItemCount(
             @PathVariable Long id,
             @RequestParam String action,
