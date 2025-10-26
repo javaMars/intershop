@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
 
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <title>Витрина магазина</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
@@ -25,13 +25,13 @@
             <div class="col">
                 <div class="card">
                     <div class="card-header">
-                        <a th:text="${'Заказ №'+order.id}" th:href="${'/orders/'+order.id}"></a>
+                        <a th:text="${'Заказ №'+order.id}" th:href="@{/orders/{id}(id=${order.id})}"></a>
                     </div>
                     <ul class="list-group list-group-flush" th:each="item : ${order.items}">
                         <li class="list-group-item" th:text="${item.title+' ('+item.count+' шт.) '+(item.price*item.count)+' руб.'}"/>
                     </ul>
                     <div class="card-footer">
-                        <b th:text="${'Сумма: '+order.totalSum}+' руб.'"></b>
+                        <b th:text="|Сумма: ${order.totalSum} руб.|"></b>
                     </div>
                 </div>
             </div>

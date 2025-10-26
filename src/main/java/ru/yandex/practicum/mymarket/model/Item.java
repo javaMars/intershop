@@ -1,6 +1,9 @@
-package ru.yandex.practicum.mymarket.dto;
+package ru.yandex.practicum.mymarket.model;
 
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "items")
@@ -18,6 +21,8 @@ public class Item {
     private long price;
     @Column
     private int count;
+    @OneToMany(mappedBy = "item", cascade = CascadeType.REMOVE)
+    private List<OrderItem> orderItems = new ArrayList<>();
 
     public Item() {
     }

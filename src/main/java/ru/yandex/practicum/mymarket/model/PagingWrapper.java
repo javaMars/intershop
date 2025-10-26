@@ -1,4 +1,4 @@
-package ru.yandex.practicum.mymarket.dto;
+package ru.yandex.practicum.mymarket.model;
 
 import org.springframework.data.domain.Page;
 

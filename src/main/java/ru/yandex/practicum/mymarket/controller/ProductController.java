@@ -10,8 +10,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import ru.yandex.practicum.mymarket.dto.Item;
-import ru.yandex.practicum.mymarket.dto.PagingWrapper;
+import ru.yandex.practicum.mymarket.model.Item;
+import ru.yandex.practicum.mymarket.model.PagingWrapper;
 import ru.yandex.practicum.mymarket.service.ProductService;
 
 import java.util.*;

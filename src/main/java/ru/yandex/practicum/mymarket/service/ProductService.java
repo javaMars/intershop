@@ -2,7 +2,7 @@ package ru.yandex.practicum.mymarket.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import ru.yandex.practicum.mymarket.dto.Item;
+import ru.yandex.practicum.mymarket.model.Item;
 
 import java.util.List;
 import java.util.Optional;

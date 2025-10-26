@@ -1,17 +1,19 @@
 package ru.yandex.practicum.mymarket.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import ru.yandex.practicum.mymarket.dto.Order;
+import ru.yandex.practicum.mymarket.model.Order;
 import ru.yandex.practicum.mymarket.dto.OrderDto;
 import ru.yandex.practicum.mymarket.service.OrderService;
 
 import java.util.List;
 import java.util.Optional;
 
+@Controller
 public class OrderController {
 
     private final OrderService orderService;
@@ -38,10 +40,29 @@ public class OrderController {
 
     @PostMapping("/buy")
     public String createOrder(RedirectAttributes redirectAttributes) {
-        Order order = orderService.createFromCart();
-        Long orderId = order.getId();
+        try {
+            System.out.println("Начинаем создание заказа..."); // Логирование
+            Order order = orderService.createFromCart();
+            System.out.println("Заказ создан: " + order.getId()); // Логирование
+            redirectAttributes.addAttribute("newOrder", "true");
+            return String.format("redirect:/orders/%d", order.getId());
+        } catch (Exception e) {
+            e.printStackTrace(); // Логирование ошибки
+            redirectAttributes.addFlashAttribute("error", "Произошла ошибка при создании заказа");
+            return "redirect:/cart";
+        }
 
-        redirectAttributes.addAttribute("newOrder", "true");
-        return "redirect:/orders/" + orderId;
+//        try {
+//            Order order = orderService.createFromCart();
+//            if (order.getId() == null) {
+//                throw new RuntimeException("Не удалось получить ID заказа");
+//            }
+//            redirectAttributes.addAttribute("newOrder", "true");
+//            return String.format("redirect:/orders/%d", order.getId());
+//        } catch (Exception e) {
+//            redirectAttributes.addFlashAttribute("error", "Произошла ошибка при создании заказа");
+//            return "redirect:/cart";
+//        }
+
     }
 }

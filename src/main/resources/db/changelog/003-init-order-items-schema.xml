@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="create_order_items_table" author="AlenaOngarbaeva">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <not>
+                    <tableExists tableName="order_items"/>
+                </not>
+                <tableExists tableName="orders"/>
+                <tableExists tableName="items"/>
+                <dbms type="postgresql"/>
+            </and>
+        </preConditions>
+        <createTable tableName="order_items">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="bigint">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="item_id" type="bigint">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="count" type="int" defaultValue="1">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                constraintName="fk_order_items_order"
+                baseTableName="order_items"
+                baseColumnNames="order_id"
+                referencedTableName="orders"
+                referencedColumnNames="id"
+                onDelete="CASCADE"
+                onUpdate="NO ACTION"/>
+
+        <addForeignKeyConstraint
+                constraintName="fk_order_items_item"
+                baseTableName="order_items"
+                baseColumnNames="item_id"
+                referencedTableName="items"
+                referencedColumnNames="id"
+                onDelete="CASCADE"
+                onUpdate="NO ACTION"/>
+
+        <rollback>
+            <dropTable tableName="order_items"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

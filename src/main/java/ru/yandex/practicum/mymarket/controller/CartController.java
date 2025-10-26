@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import ru.yandex.practicum.mymarket.dto.Item;
+import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.service.ProductService;
 
 import java.util.List;
