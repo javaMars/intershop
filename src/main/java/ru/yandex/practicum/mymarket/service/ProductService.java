@@ -11,6 +11,4 @@ public interface ProductService {
     Page<Item> findAll(Pageable pageable);
     Page<Item> findByTitle(String trim, Pageable pageable);
     Optional<Item> findById(Long id);
-    void handleItemAction(Long itemId, String action);
-    List<Item> getCartItems();
 }

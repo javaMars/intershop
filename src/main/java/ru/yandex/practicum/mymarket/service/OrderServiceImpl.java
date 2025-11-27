@@ -2,16 +2,16 @@ package ru.yandex.practicum.mymarket.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.mymarket.dto.*;
-import ru.yandex.practicum.mymarket.model.Item;
-import ru.yandex.practicum.mymarket.model.Order;
-import ru.yandex.practicum.mymarket.model.OrderItem;
+import ru.yandex.practicum.mymarket.model.*;
+import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.OrderRepository;
-import ru.yandex.practicum.mymarket.repository.ProductRepository;
+import ru.yandex.practicum.mymarket.repository.CartRepository;
 
-import java.math.BigDecimal;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,11 +23,14 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private final OrderRepository orderRepository;
     @Autowired
-    private final ProductRepository productRepository;
+    private final CartRepository cartRepository;
+    @Autowired
+    private final CartItemRepository cartItemRepository;
 
-    public OrderServiceImpl(OrderRepository orderRepository, ProductRepository productRepository) {
+    public OrderServiceImpl(OrderRepository orderRepository, CartRepository cartRepository, CartItemRepository cartItemRepository) {
         this.orderRepository = orderRepository;
-        this.productRepository = productRepository;
+        this.cartRepository = cartRepository;
+        this.cartItemRepository = cartItemRepository;
     }
 
     public List<OrderDto> findAllOrders() {
@@ -74,35 +77,31 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public Order createFromCart() {
         try {
-            List<Item> cartItems = productRepository.findItemsInCart();
+            Cart cart = cartRepository.findAllCart(PageRequest.of(0, 1))
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+            //Cart cart = cartRepository.findById(1L).orElseThrow(() -> new RuntimeException("Корзина не найдена"));
+            List<CartItem> cartItems = cartItemRepository.findByCart(cart);
             Order order = new Order();
             order.setItems(new ArrayList<>());
             long totalSum = 0L;
 
-            for (Item item : cartItems) {
+            for (CartItem cartItem : cartItems) {
                 OrderItem orderItem = new OrderItem();
-                orderItem.setItem(item);
-                orderItem.setCount(item.getCount());
-                orderItem.setOrder(order); // ВАЖНО: свяжите OrderItem с Order
+                orderItem.setItem(cartItem.getItem());
+                orderItem.setCount(cartItem.getCount());
+                orderItem.setOrder(order);
                 order.getItems().add(orderItem);
-                totalSum += item.getPrice() * item.getCount();
+                totalSum += cartItem.getItem().getPrice() * cartItem.getCount();
             }
 
             order.setTotalSum(totalSum);
-            removeItemsFromCart();
+            cartItemRepository.deleteAll();
 
             return orderRepository.save(order);
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    @Transactional
-    public void removeItemsFromCart() throws Exception {
-        try {
-            productRepository.removeItemsFromCart();
-        } catch (DataAccessException e) {
-            throw new Exception("Не удалось обновить корзину", e);
         }
     }
 }

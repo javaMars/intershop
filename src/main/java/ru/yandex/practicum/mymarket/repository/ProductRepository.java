@@ -21,11 +21,4 @@ public interface ProductRepository extends PagingAndSortingRepository<Item, Long
     Optional<Item> findById(Long id);
 
     void save(Item item);
-
-    @Query("SELECT i FROM Item i WHERE i.count > 0")
-    List<Item> findItemsInCart();
-
-    @Modifying
-    @Query("UPDATE Item SET count = 0 WHERE count > 0")
-    void removeItemsFromCart();
 }

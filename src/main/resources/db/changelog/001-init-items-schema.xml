@@ -22,7 +22,6 @@
             <column name="description" type="varchar(255)"/>
             <column name="img_path" type="varchar(255)"/>
             <column name="price" type="bigint"/>
-            <column name="count" type="int"/>
         </createTable>
         <rollback>
             <dropTable tableName="items"/>
@@ -44,28 +43,24 @@
             <column name="description" value="Очень модная бейсболка белого цвета"/>
             <column name="img_path" value="img1.jpg"/>
             <column name="price" value="1500"/>
-            <column name="count" value="0"/>
         </insert>
         <insert tableName="items">
             <column name="title" value="Футбольный мяч"/>
             <column name="description" value="Классный мяч для игры в футбол"/>
             <column name="img_path" value="img2.jpg"/>
             <column name="price" value="4000"/>
-            <column name="count" value="0"/>
         </insert>
         <insert tableName="items">
             <column name="title" value="Бейсбольный мяч"/>
             <column name="description" value="Мяч для игры в бейсбол"/>
             <column name="img_path" value="img3.jpg"/>
             <column name="price" value="1500"/>
-            <column name="count" value="0"/>
         </insert>
         <insert tableName="items">
             <column name="title" value="Зонтик"/>
             <column name="description" value="Зонтик пригодится в пасмурную погоду"/>
             <column name="img_path" value="img4.jpg"/>
             <column name="price" value="2000"/>
-            <column name="count" value="0"/>
         </insert>
     </changeSet>
 </databaseChangeLog>

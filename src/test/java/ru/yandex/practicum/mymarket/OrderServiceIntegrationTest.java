@@ -11,6 +11,8 @@ import ru.yandex.practicum.mymarket.dto.OrderDto;
 import ru.yandex.practicum.mymarket.model.Order;
 import ru.yandex.practicum.mymarket.repository.OrderRepository;
 import ru.yandex.practicum.mymarket.repository.ProductRepository;
+import ru.yandex.practicum.mymarket.repository.CartRepository;
+import ru.yandex.practicum.mymarket.service.CartServiceImpl;
 import ru.yandex.practicum.mymarket.service.OrderServiceImpl;
 
 import java.util.List;
@@ -29,6 +31,9 @@ public class OrderServiceIntegrationTest {
     private OrderServiceImpl orderServiceImpl;
 
     @Autowired
+    private CartServiceImpl cartServiceImpl;
+
+    @Autowired
     private OrderRepository orderRepository;
 
     @Autowired
@@ -37,7 +42,7 @@ public class OrderServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        orderRepository.deleteAll(); // Удаляет все записи
+        orderRepository.deleteAll();
         orderRepository.flush();
     }
 

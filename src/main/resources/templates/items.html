@@ -70,9 +70,9 @@
                                 <input type="hidden" name="pageSize" th:value="${paging.pageSize}">
                                 <input type="hidden" name="pageNumber" th:value="${paging.pageNumber}">
                                 <button type="submit" class="btn btn-outline-secondary" name="action" value="MINUS">-</button>
-                                <span th:text="${item.count}"></span>
+                                <span th:text="${itemCountMap[item.id]} ?: 0"></span>
                                 <button type="submit" class="btn btn-outline-secondary" name="action" value="PLUS">+</button>
-                                <button type="submit" class="btn btn-warning ms-auto bi bi-cart4" name="action" value="PLUS" th:if="${item.count==0}"></button>
+                                <button type="submit" class="btn btn-warning ms-auto bi bi-cart4" name="action" value="PLUS" th:if="${itemCountMap[item.id]==0}"></button>
                             </div>
                         </form>
                     </div>

@@ -8,6 +8,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import ru.yandex.practicum.mymarket.dto.OrderDto;
+import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.OrderService;
 
 
@@ -28,6 +29,9 @@ class OrderControllerTest {
 
     @MockBean
     private OrderService orderService;
+    @MockBean
+    private CartService cartService;
+
 
     @Test
     void testViewAllOrders() throws Exception {
