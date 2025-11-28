@@ -1,7 +1,5 @@
 package ru.yandex.practicum.mymarket.dto;
 
-import jakarta.persistence.Column;
-
 public class ItemDto {
     private long id;
     private String title;

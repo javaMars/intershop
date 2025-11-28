@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.PagingWrapper;
+import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.ProductService;
 
 import java.util.*;
@@ -20,14 +21,16 @@ import java.util.*;
 @RequestMapping("/items")
 public class ProductController {
     private final ProductService productService;
+    private final CartService cartService;
 
     private static final Map<String, Sort> SORT_STRATEGIES = Map.of(
             "ALPHA", Sort.by("title").ascending(),
             "PRICE", Sort.by("price").ascending()
     );
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, CartService cartService) {
         this.productService = productService;
+        this.cartService = cartService;
     }
 
     @GetMapping
@@ -66,10 +69,13 @@ public class ProductController {
             itemsByGroup.add(partItems);
         }
 
+        Map<Long, Integer> itemCountMap = cartService.getItemCountsMap();
+
         model.addAttribute("items", itemsByGroup);
         model.addAttribute("paging", new PagingWrapper<>(filteredItemsPage));
         model.addAttribute("search", search != null ? search : "");
         model.addAttribute("sort", sort);
+        model.addAttribute("itemCountMap", itemCountMap);
 
         return "items";
     }
@@ -83,7 +89,7 @@ public class ProductController {
             @RequestParam(required = false, defaultValue = "5") int pageSize,
             @RequestParam String action, RedirectAttributes redirectAttributes) {
 
-        productService.handleItemAction(id, action);
+        cartService.handleItemAction(id, action);
 
         redirectAttributes.addAttribute("search", search);
         redirectAttributes.addAttribute("sort", sort);
@@ -98,6 +104,10 @@ public class ProductController {
         Optional<Item> optionalItem = productService.findById(id);
 
         model.addAttribute("item", optionalItem.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")));
+
+        int countInCart = cartService.getItemCountInCart(id);
+        model.addAttribute("countInCart", countInCart);
+
         return "item";
     }
 
@@ -107,10 +117,13 @@ public class ProductController {
             @RequestParam String action,
             Model model) {
 
-        productService.handleItemAction(id, action);
+        cartService.handleItemAction(id, action);
 
         Item item = productService.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден"));
+
+        int countInCart = cartService.getItemCountInCart(id);
+        model.addAttribute("countInCart", countInCart);
 
         model.addAttribute("item", item);
         return "item";

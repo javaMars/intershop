@@ -19,8 +19,6 @@ public class Item {
     private String imgPath;
     @Column
     private long price;
-    @Column
-    private int count;
     @OneToMany(mappedBy = "item", cascade = CascadeType.REMOVE)
     private List<OrderItem> orderItems = new ArrayList<>();
 
@@ -33,15 +31,6 @@ public class Item {
         this.description = description;
         this.imgPath = imgPath;
         this.price = price;
-        this.count = count;
-    }
-
-    public int getCount() {
-        return count;
-    }
-
-    public void setCount(int count) {
-        this.count = count;
     }
 
     public long getPrice() {
