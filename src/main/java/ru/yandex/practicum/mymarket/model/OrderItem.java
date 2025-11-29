@@ -1,27 +1,39 @@
 package ru.yandex.practicum.mymarket.model;
-import jakarta.persistence.*;
 
-@Entity
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
+
 @Table(name = "order_items")
 public class OrderItem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    @Column("order_id")
+    private Long orderId;
 
-    @ManyToOne
-    @JoinColumn(name = "item_id", nullable = false)
-    private Item item;
+    @Column("item_id")
+    private Long itemId;
 
-    @Column(name = "count", nullable = false)
+    @Column("count")
     private int count;
+
+    @Transient
+    private Order order;    // Для удобства в коде
+
+    @Transient
+    private Item item;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Long getOrderId() { return orderId; }
+    public void setOrderId(Long orderId) { this.orderId = orderId; }
+
+    public Long getItemId() { return itemId; }
+    public void setItemId(Long itemId) { this.itemId = itemId; }
 
     public Order getOrder() { return order; }
     public void setOrder(Order order) { this.order = order; }
@@ -32,4 +44,3 @@ public class OrderItem {
     public int getCount() { return count; }
     public void setCount(int count) { this.count = count; }
 }
-
