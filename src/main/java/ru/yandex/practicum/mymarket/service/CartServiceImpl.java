@@ -29,16 +29,16 @@ public class CartServiceImpl implements CartService  {
     }
 
     public List<CartItem> findCartItems() {
-        return cartItemRepository.findByCart(cart);
+        return cartItemRepository.findByCartId(cart);
     }
 
     public int getItemCountInCart(Long itemId) {
-        Optional<CartItem> cartItemOpt = cartItemRepository.findByCartAndItem(cart, productRepository.findById(itemId).orElseThrow());
+        Optional<CartItem> cartItemOpt = cartItemRepository.findByCartIdAndItemId(cart, productRepository.findById(itemId).orElseThrow());
         return cartItemOpt.map(CartItem::getCount).orElse(0);
     }
 
     public Map<Long, Integer> getItemCountsMap() {
-        List<CartItem> cartItems = cartItemRepository.findByCart(cart);
+        List<CartItem> cartItems = cartItemRepository.findByCartId(cart);
         return cartItems.stream()
                 .collect(Collectors.toMap(
                         ci -> ci.getItem().getId(),
@@ -64,7 +64,7 @@ public class CartServiceImpl implements CartService  {
     @Transactional
     void increaseItemCount(Long itemId) {
         Item item = productRepository.findById(itemId).orElseThrow(() -> new RuntimeException("Товар не найден"));
-        CartItem cartItem = cartItemRepository.findByCartAndItem(cart, item).orElse(null);
+        CartItem cartItem = cartItemRepository.findByCartIdAndItemId(cart, item).orElse(null);
         if (cartItem == null) {
             cartItem = new CartItem();
             cartItem.setCart(cart);
@@ -79,7 +79,7 @@ public class CartServiceImpl implements CartService  {
     @Transactional
     void decreaseItemCount(Long itemId) {
         Item item = productRepository.findById(itemId).orElseThrow(() -> new RuntimeException("Товар не найден"));
-        CartItem cartItem = cartItemRepository.findByCartAndItem(cart, item).orElseThrow(() -> new RuntimeException("Товар в корзине не найден"));
+        CartItem cartItem = cartItemRepository.findByCartIdAndItemId(cart, item).orElseThrow(() -> new RuntimeException("Товар в корзине не найден"));
         int newCount = cartItem.getCount() - 1;
         if (newCount <= 0) {
             cartItemRepository.delete(cartItem);
@@ -94,6 +94,6 @@ public class CartServiceImpl implements CartService  {
         Item item = productRepository.findById(itemId).orElseThrow(() -> new RuntimeException("Товар не найден"));
         System.out.println("ИД товара: " + item.getId());
         System.out.println("ИД корзины: " + cart.getId());
-        cartItemRepository.deleteByCartAndItem(cart, item);
+        cartItemRepository.deleteByCartIdAndItemId(cart, item);
     }
 }

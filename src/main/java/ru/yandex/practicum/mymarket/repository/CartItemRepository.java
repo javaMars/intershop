@@ -1,24 +1,19 @@
 package ru.yandex.practicum.mymarket.repository;
 
-import jakarta.transaction.Transactional;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.r2dbc.repository.Query;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.model.*;
 
-import java.util.List;
-import java.util.Optional;
 
 @Repository
-public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-    Optional<CartItem> findByCartAndItem(Cart cart, Item item);
+public interface CartItemRepository extends ReactiveCrudRepository<CartItem, Long> {
+    Mono<CartItem> findByCartIdAndItemId(Long cartId, Long itemId);
 
-    List<CartItem> findByCart(Cart cart);
+    Flux<CartItem> findByCartId(Long cartId);
 
-    @Transactional
-    @Modifying
-    @Query("delete from CartItem ci where ci.cart = :cart and ci.item = :item")
-    void deleteByCartAndItem(@Param("cart") Cart cart, @Param("item") Item item);
+    @Query("DELETE FROM cart_items ci WHERE ci.cart_id = :cartId AND ci.item_id = :itemId")
+    Mono<Long> deleteByCartIdAndItemId(Long cartId, Long itemId);
 }

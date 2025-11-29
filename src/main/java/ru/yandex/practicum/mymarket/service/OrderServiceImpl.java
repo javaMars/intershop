@@ -10,8 +10,6 @@ import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.OrderRepository;
 import ru.yandex.practicum.mymarket.repository.CartRepository;
 
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -82,7 +80,7 @@ public class OrderServiceImpl implements OrderService {
                     .findFirst()
                     .orElse(null);
             //Cart cart = cartRepository.findById(1L).orElseThrow(() -> new RuntimeException("Корзина не найдена"));
-            List<CartItem> cartItems = cartItemRepository.findByCart(cart);
+            List<CartItem> cartItems = cartItemRepository.findByCartId(cart);
             Order order = new Order();
             order.setItems(new ArrayList<>());
             long totalSum = 0L;
