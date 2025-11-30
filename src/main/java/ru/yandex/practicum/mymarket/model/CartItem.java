@@ -25,7 +25,11 @@ public class CartItem {
     @Transient
     private Item item;
 
-    public CartItem() {}
+    public CartItem(Long cartId, Long itemId, int count) {
+        this.cartId = cartId;
+        this.itemId = itemId;
+        this.count = count;
+    }
 
     public Long getId() { return id; }
 

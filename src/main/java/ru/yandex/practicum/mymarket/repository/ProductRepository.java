@@ -11,9 +11,9 @@ import ru.yandex.practicum.mymarket.model.Item;
 @Repository
 public interface ProductRepository extends ReactiveCrudRepository<Item, Long> {
     @NonNull
-    Flux<Item> findAll(@NonNull Pageable pageable);
+    Flux<Item> findAll();
 
-    Flux<Item> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+    Flux<Item> findByTitleContainingIgnoreCase(String title);
 
     Mono<Item> findById(Long id);
 }

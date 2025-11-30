@@ -1,8 +1,11 @@
 package ru.yandex.practicum.mymarket.service;
 
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.model.Cart;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
@@ -10,15 +13,14 @@ import ru.yandex.practicum.mymarket.repository.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
+@EnableTransactionManagement
 public class CartServiceImpl implements CartService  {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
-    private Cart cart;
+    private final Mono<Cart> cart;
 
     @Autowired
     public CartServiceImpl(CartRepository cartRepository, CartItemRepository cartItemRepository, ProductRepository productRepository) {
@@ -28,72 +30,97 @@ public class CartServiceImpl implements CartService  {
         this.cart = cartRepository.save(new Cart());
     }
 
-    public List<CartItem> findCartItems() {
-        return cartItemRepository.findByCartId(cart);
+    public Flux<CartItem> findCartItems() {
+        return cart.flatMapMany(cartFunc ->
+                cartItemRepository.findByCartId(cartFunc.getId())
+        );
     }
 
-    public int getItemCountInCart(Long itemId) {
-        Optional<CartItem> cartItemOpt = cartItemRepository.findByCartIdAndItemId(cart, productRepository.findById(itemId).orElseThrow());
-        return cartItemOpt.map(CartItem::getCount).orElse(0);
+    public Mono<Integer> getItemCountInCart(Long itemId) {
+        return cart.flatMap(cartObj ->
+                productRepository.findById(itemId)
+                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                        .flatMap(item ->
+                                cartItemRepository.findByCartIdAndItemId(cartObj.getId(),item.getId())
+                                        .map(CartItem::getCount)
+                                        .defaultIfEmpty(0)
+                        )
+                );
     }
 
-    public Map<Long, Integer> getItemCountsMap() {
-        List<CartItem> cartItems = cartItemRepository.findByCartId(cart);
-        return cartItems.stream()
-                .collect(Collectors.toMap(
-                        ci -> ci.getItem().getId(),
+    public Mono<Map<Long, Integer>> getItemCountsMap() {
+        return cart.flatMapMany(cartFunc -> cartItemRepository.findByCartId(cartFunc.getId())
+                )
+                .collectMap(
+                        cartItem -> cartItem.getItem().getId(),
                         CartItem::getCount
-                ));
+                );
+
     }
 
-    public void handleItemAction(Long itemId, String action) {
-        String normalizedAction = Optional.ofNullable(action)
+    public Mono<Void> handleItemAction(Long itemId, String action) {
+        return Mono.justOrEmpty(action)
                 .map(String::toUpperCase)
                 .filter(actionFilter -> List.of("MINUS", "PLUS", "DELETE").contains(actionFilter))
-                .orElseThrow(() -> new IllegalArgumentException("Некорректно указано действие: " + action));
-
-        if ("MINUS".equals(normalizedAction)) {
-            decreaseItemCount(itemId);
-        } else if ("PLUS".equals(normalizedAction)){
-            increaseItemCount(itemId);
-        } else {
-            removeItem(itemId);
-        }
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Некорректно указано действие: " + action)))
+                .flatMap(normalizedAction -> {
+                    if ("MINUS".equals(normalizedAction)) {
+                        return decreaseItemCount(itemId);
+                    } else if ("PLUS".equals(normalizedAction)) {
+                        return increaseItemCount(itemId);
+                    } else {
+                        return removeItem(itemId);
+                    }
+                });
     }
 
     @Transactional
-    void increaseItemCount(Long itemId) {
-        Item item = productRepository.findById(itemId).orElseThrow(() -> new RuntimeException("Товар не найден"));
-        CartItem cartItem = cartItemRepository.findByCartIdAndItemId(cart, item).orElse(null);
-        if (cartItem == null) {
-            cartItem = new CartItem();
-            cartItem.setCart(cart);
-            cartItem.setItem(item);
-            cartItem.setCount(1);
-        } else {
-            cartItem.setCount(cartItem.getCount() + 1);
-        }
-        cartItemRepository.save(cartItem);
+    Mono<Void> increaseItemCount(Long itemId) {
+        return cart.flatMap(cartObj ->
+                productRepository.findById(itemId)
+                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                        .flatMap(item ->
+                                cartItemRepository.findByCartIdAndItemId(cartObj.getId(), item.getId())
+                                        .defaultIfEmpty(new CartItem(cartObj.getId(), item.getId(), 0))
+                                        .flatMap(cartItem -> {
+                                            cartItem.setCount(cartItem.getCount() + 1);
+                                            return cartItemRepository.save(cartItem);
+                                        })
+                        )
+        ).then();
+    }
+
+
+    @Transactional
+    Mono<Void> decreaseItemCount(Long itemId) {
+        return cart.flatMap(cartObj ->
+                productRepository.findById(itemId)
+                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                        .flatMap(item ->
+                                cartItemRepository.findByCartIdAndItemId(cartObj.getId(), item.getId())
+                                        .defaultIfEmpty(new CartItem(cartObj.getId(), item.getId(), 0))
+                                        .flatMap(cartItem -> {
+                                            int newCount = cartItem.getCount() - 1;
+                                            if (newCount <= 0)
+                                            {
+                                                return cartItemRepository.delete(cartItem);
+                                            } else {
+                                                cartItem.setCount(newCount);
+                                                return cartItemRepository.save(cartItem);
+                                            }
+                                        })
+                        )
+        ).then();
     }
 
     @Transactional
-    void decreaseItemCount(Long itemId) {
-        Item item = productRepository.findById(itemId).orElseThrow(() -> new RuntimeException("Товар не найден"));
-        CartItem cartItem = cartItemRepository.findByCartIdAndItemId(cart, item).orElseThrow(() -> new RuntimeException("Товар в корзине не найден"));
-        int newCount = cartItem.getCount() - 1;
-        if (newCount <= 0) {
-            cartItemRepository.delete(cartItem);
-        } else {
-            cartItem.setCount(newCount);
-            cartItemRepository.save(cartItem);
-        }
-    }
-
-    @Transactional
-    void removeItem(Long itemId) {
-        Item item = productRepository.findById(itemId).orElseThrow(() -> new RuntimeException("Товар не найден"));
-        System.out.println("ИД товара: " + item.getId());
-        System.out.println("ИД корзины: " + cart.getId());
-        cartItemRepository.deleteByCartIdAndItemId(cart, item);
+    Mono<Void> removeItem(Long itemId) {
+        return cart.flatMap(cartObj ->
+                productRepository.findById(itemId)
+                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                        .flatMap((item ->
+                                cartItemRepository.deleteByCartIdAndItemId(cartObj.getId(), itemId))
+                        )
+        ).then();
     }
 }

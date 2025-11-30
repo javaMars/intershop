@@ -1,20 +1,17 @@
 package ru.yandex.practicum.mymarket.service;
 
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.dto.*;
 import ru.yandex.practicum.mymarket.model.*;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.OrderRepository;
 import ru.yandex.practicum.mymarket.repository.CartRepository;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -31,32 +28,27 @@ public class OrderServiceImpl implements OrderService {
         this.cartItemRepository = cartItemRepository;
     }
 
-    public List<OrderDto> findAllOrders() {
-        try {
-            return orderRepository.findAll().stream()
-                    .map(this::convertToDto)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
+    public Flux<OrderDto> findAllOrders() {
+        return orderRepository.findAll()
+                .flatMap(this::convertToDto)
+                .onErrorResume(e -> Flux.empty());
     }
 
-    private OrderDto convertToDto(Order order) {
-        OrderDto dto = new OrderDto();
-        dto.setId(order.getId());
-        dto.setTotalSum(order.getTotalSum());
-
-        List<ItemDto> items = order.getItems() != null
-                ? order.getItems().stream()
-                .map(this::convertOrderItemToItemDto)
-                .collect(Collectors.toList())
-                : Collections.emptyList();
-
-        dto.setItems(items);
-        return dto;
+    private Mono<OrderDto> convertToDto(Order order) {
+        return Flux.fromIterable(order.getItems() != null ? order.getItems() : Collections.emptyList())
+                .flatMap(this::convertOrderItemToItemDto)
+                .collectList()
+                .map(items -> {
+                    OrderDto dto = new OrderDto();
+                    dto.setId(order.getId());
+                    dto.setTotalSum(order.getTotalSum());
+                    dto.setItems(items);
+                    return dto;
+                });
     }
 
-    private ItemDto convertOrderItemToItemDto(OrderItem orderItem) {
+    private Mono<ItemDto> convertOrderItemToItemDto(OrderItem orderItem) {
+
         Item item = orderItem.getItem();
         ItemDto itemDto = new ItemDto();
         itemDto.setId(item.getId());
@@ -65,42 +57,38 @@ public class OrderServiceImpl implements OrderService {
         itemDto.setImgPath(item.getImgPath());
         itemDto.setPrice(item.getPrice());
         itemDto.setCount(orderItem.getCount());
-        return itemDto;
+
+        return Mono.just(itemDto);
     }
 
-    public Optional<OrderDto> findOrder(Long id) {
-        return orderRepository.findById(id).map(this::convertToDto);
+    public Mono<OrderDto> findOrder(Long id) {
+        return orderRepository.findById(id).flatMap(this::convertToDto);
     }
 
     @Transactional
-    public Order createFromCart() {
-        try {
-            Cart cart = cartRepository.findAllCart(PageRequest.of(0, 1))
-                    .stream()
-                    .findFirst()
-                    .orElse(null);
-            //Cart cart = cartRepository.findById(1L).orElseThrow(() -> new RuntimeException("Корзина не найдена"));
-            List<CartItem> cartItems = cartItemRepository.findByCartId(cart);
-            Order order = new Order();
-            order.setItems(new ArrayList<>());
-            long totalSum = 0L;
+    public Mono<Order> createFromCart() {
+        return cartRepository.findLastCart()
+                .flatMap(cart -> cartItemRepository.findByCartId(cart.getId())
+                        .flatMap(cartItem -> {
+                            OrderItem orderItem = new OrderItem();
+                            orderItem.setItem(cartItem.getItem());
+                            orderItem.setCount(cartItem.getCount());
+                            return Mono.just(orderItem);
+                        })
+                        .collectList()
+                        .flatMap(orderItems -> {
+                            Order order = new Order();
+                            order.setItems(orderItems);
+                            long totalSum = orderItems.stream()
+                                    .mapToLong(oi -> oi.getItem().getPrice() *
+                                            oi.getCount())
+                                    .sum();
+                            order.setTotalSum(totalSum);
 
-            for (CartItem cartItem : cartItems) {
-                OrderItem orderItem = new OrderItem();
-                orderItem.setItem(cartItem.getItem());
-                orderItem.setCount(cartItem.getCount());
-                orderItem.setOrder(order);
-                order.getItems().add(orderItem);
-                totalSum += cartItem.getItem().getPrice() * cartItem.getCount();
-            }
-
-            order.setTotalSum(totalSum);
-            cartItemRepository.deleteAll();
-
-            return orderRepository.save(order);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+                            return cartItemRepository.deleteAll()
+                                    .then(orderRepository.save(order));
+                        })
+                )
+                .onErrorResume(e -> Mono.error(new RuntimeException("Ошибка при создании заказа: " + e.getMessage())));
     }
 }
-
