@@ -1,39 +1,35 @@
 package ru.yandex.practicum.mymarket.model;
 
-import org.springframework.data.domain.Page;
+public class PagingWrapperReactive {
+    private final int pageSize;
+    private final int pageNumber;
+    private final long totalElements;
+    private final int totalPages;
 
-public class PagingWrapper<T> {
-    private final Page<T> page;
-
-    public PagingWrapper(Page<T> page) {
-        this.page = page;
+    public PagingWrapperReactive(int pageSize, int pageNumber, long totalElements) {
+        this.pageSize = pageSize;
+        this.pageNumber = pageNumber;
+        this.totalElements = totalElements;
+        this.totalPages = (int) Math.ceil((double) totalElements / pageSize);
     }
 
     public int getPageSize() {
-        return page.getSize();
+        return pageSize;
     }
 
     public int getPageCurrent() {
-        return page.getNumber() + 1; // пользователю с 1
+        return pageNumber + 1;
     }
 
     public int getPageNumber() {
-        return page.getNumber();
-    }
-
-    public boolean isHasNext() {
-        return page.hasNext();
-    }
-
-    public boolean isHasPrevious() {
-        return page.hasPrevious();
+        return pageNumber;
     }
 
     public int getTotalPages() {
-        return page.getTotalPages();
+        return totalPages;
     }
 
     public long getTotalElements() {
-        return page.getTotalElements();
+        return totalElements;
     }
 }

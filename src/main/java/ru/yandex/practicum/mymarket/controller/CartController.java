@@ -7,10 +7,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.service.CartService;
 
 import java.util.List;
+
+import static java.lang.Long.sum;
 
 @Controller
 @RequestMapping("/cart/items")
@@ -24,39 +27,39 @@ public class CartController {
     }
 
     @GetMapping
-    public String viewCart(Model model) {
-        List<CartItem> cartItems = cartService.findCartItems();
+    public Mono<String> viewCart(Model model) {
+        return cartService.findCartItems()
+                .collectList()
+                .map(cartItems -> {
+                    long total = cartItems.stream()
+                            .mapToLong(cartItem ->
+                                    cartItem.getItem().getPrice() * cartItem.getCount())
+                            .sum();
 
-        long total = cartItems.stream()
-                .mapToLong(cartItem -> cartItem.getItem().getPrice() * cartItem.getCount())
-                .sum();
+                    model.addAttribute("items", cartItems);
+                    model.addAttribute("total", total);
 
-        model.addAttribute("items", cartItems);
-        model.addAttribute("total", total);
-
-        return "cart";
+                    return "cart";
+                });
     }
 
     @PostMapping
-    public String updateCartItem(
+    public Mono<String> updateCartItem(
             @RequestParam("id") Long itemId,
             @RequestParam("action") String action,
             Model model
     ) {
-        try {
-            cartService.handleItemAction(itemId, action);
-        } catch (Exception e) {
-            model.addAttribute("error", "Ошибка при обработке действия");
-        }
+        return cartService.handleItemAction(itemId, action)
+                .then(cartService.findCartItems().collectList())
+                .map(cartItems -> {
+                    long total = cartItems.stream()
+                            .mapToLong(item -> item.getItem().getPrice() * item.getCount())
+                            .sum();
 
-        List<CartItem> cartItems = cartService.findCartItems();
-        long total = cartItems.stream()
-                .mapToLong(item -> item.getItem().getPrice() * item.getCount())
-                .sum();
+                    model.addAttribute("items", cartItems);
+                    model.addAttribute("total", total);
 
-        model.addAttribute("items", cartItems);
-        model.addAttribute("total", total);
-
-        return "cart";
+                    return "cart";
+                });
     }
 }

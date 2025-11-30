@@ -8,5 +8,5 @@ import ru.yandex.practicum.mymarket.dto.OrderDto;
 public interface OrderService {
     Flux<OrderDto> findAllOrders();
     Mono<OrderDto> findOrder(Long id);
-    Mono<Order> createFromCart() throws Exception;
+    Mono<Order> createFromCart();
 }
