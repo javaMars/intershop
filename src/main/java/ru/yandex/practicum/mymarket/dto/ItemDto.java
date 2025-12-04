@@ -1,5 +1,7 @@
 package ru.yandex.practicum.mymarket.dto;
 
+import ru.yandex.practicum.mymarket.model.Item;
+
 public class ItemDto {
     private long id;
     private String title;
@@ -17,6 +19,15 @@ public class ItemDto {
         this.description = description;
         this.imgPath = imgPath;
         this.price = price;
+        this.count = count;
+    }
+
+    public ItemDto(Item item, int count) {
+        this.id = item.getId();
+        this.title = item.getTitle();
+        this.description = item.getDescription();
+        this.imgPath = item.getImgPath();
+        this.price = item.getPrice();
         this.count = count;
     }
 

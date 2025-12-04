@@ -1,14 +1,12 @@
 package ru.yandex.practicum.mymarket.service;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.model.Item;
 
-import java.util.List;
-import java.util.Optional;
-
 public interface ProductService {
-    Page<Item> findAll(Pageable pageable);
-    Page<Item> findByTitle(String trim, Pageable pageable);
-    Optional<Item> findById(Long id);
+    Flux<Item> findAll(Pageable pageable);
+    Flux<Item> findByTitle(String trim, Pageable pageable);
+    Mono<Item> findById(Long id);
 }

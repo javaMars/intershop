@@ -1,20 +1,22 @@
 package ru.yandex.practicum.mymarket.controller;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import ru.yandex.practicum.mymarket.dto.ItemForm;
 import ru.yandex.practicum.mymarket.model.Item;
-import ru.yandex.practicum.mymarket.model.PagingWrapper;
+import ru.yandex.practicum.mymarket.model.PagingWrapperReactive;
 import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.ProductService;
 
+import org.springframework.data.domain.Pageable;
 import java.util.*;
 
 @Controller
@@ -34,98 +36,95 @@ public class ProductController {
     }
 
     @GetMapping
-    public String viewItems(@RequestParam(required = false, defaultValue = "") String search,
-                           @RequestParam(required = false, defaultValue = "NO") String sort,
-                           @RequestParam(required = false, defaultValue = "0") int pageNumber,
-                           @RequestParam(required = false, defaultValue = "5") int pageSize,
-                           Model model) {
+    public Mono<String> viewItems(@RequestParam(required = false, defaultValue = "") String search,
+                                  @RequestParam(required = false, defaultValue = "NO") String sort,
+                                  @RequestParam(required = false, defaultValue = "0") int pageNumber,
+                                  @RequestParam(required = false, defaultValue = "5") int pageSize,
+                                  Model model) {
 
         int pageIndex = Math.max(pageNumber, 0);
 
         String normalizedSort = (sort != null) ? sort.trim().toUpperCase() : null;
         Sort sorting = (normalizedSort != null) ? SORT_STRATEGIES.get(normalizedSort) : null;
 
-        Pageable pageable = (sorting != null)
-                ? PageRequest.of(pageIndex, pageSize, sorting)
-                : PageRequest.of(pageIndex, pageSize);
-
-
-        Page<Item> filteredItemsPage;
+        Flux<Item> itemsFlux;
+        Pageable pageable = PageRequest.of(pageIndex, pageSize, sorting != null ? sorting : Sort.unsorted());
         if (search != null && !search.trim().isEmpty()) {
-            filteredItemsPage = productService.findByTitle(search.trim(), pageable);
+            itemsFlux = productService.findByTitle(search.trim(),pageable);
         } else {
-            filteredItemsPage = productService.findAll(pageable);
+            itemsFlux = productService.findAll(pageable);
         }
 
-        List<Item> filteredItems = filteredItemsPage.getContent();
+        itemsFlux = itemsFlux.skip((long) pageIndex * pageSize)
+                .take(pageSize);
 
-        // Разбиваем на списки по 3 штуки + заглушки, при необходимости
-        List<List<Item>> itemsByGroup = new ArrayList<>();
-        for (int i = 0; i < filteredItems.size(); i += 3) {
-            List<Item> partItems = new ArrayList<>(filteredItems.subList(i, Math.min(i + 3, filteredItems.size())));
-            while (partItems.size() < 3) {
-                partItems.add(new Item(-1L, "", "", "", 0L, 0)); // заглушка
-            }
-            itemsByGroup.add(partItems);
-        }
+        return itemsFlux.collectList()
+                .flatMap(filteredItems -> {
+                    List<List<Item>> itemsByGroup = new ArrayList<>();
 
-        Map<Long, Integer> itemCountMap = cartService.getItemCountsMap();
+                    for (int i = 0; i < filteredItems.size(); i += 3) {
+                        List<Item> partItems = new ArrayList<>(filteredItems.subList(i, Math.min(i + 3, filteredItems.size())));
+                        while (partItems.size() < 3) {
+                            partItems.add(new Item(-1L, "", "", "", 0L, 0)); // заглушка
+                        }
+                        itemsByGroup.add(partItems);
+                    }
+                    return cartService.getItemCountsMap()
+                            .map(itemCountMap -> {
+                                model.addAttribute("items", itemsByGroup);
+                                model.addAttribute("paging", new PagingWrapperReactive(filteredItems.size(), pageIndex, pageSize));
+                                model.addAttribute("search", search != null ? search : "");
+                                model.addAttribute("sort", sorting);
+                                model.addAttribute("itemCountMap", itemCountMap);
 
-        model.addAttribute("items", itemsByGroup);
-        model.addAttribute("paging", new PagingWrapper<>(filteredItemsPage));
-        model.addAttribute("search", search != null ? search : "");
-        model.addAttribute("sort", sort);
-        model.addAttribute("itemCountMap", itemCountMap);
-
-        return "items";
+                                return "items";
+                            });
+                });
     }
 
     @PostMapping
-    public String updateItemCount(
-            @RequestParam Long id,
-            @RequestParam(required = false, defaultValue = "") String search,
-            @RequestParam(required = false, defaultValue = "NO") String sort,
-            @RequestParam(required = false, defaultValue = "0") int pageNumber,
-            @RequestParam(required = false, defaultValue = "5") int pageSize,
-            @RequestParam String action, RedirectAttributes redirectAttributes) {
-
-        cartService.handleItemAction(id, action);
-
-        redirectAttributes.addAttribute("search", search);
-        redirectAttributes.addAttribute("sort", sort);
-        redirectAttributes.addAttribute("pageNumber", pageNumber);
-        redirectAttributes.addAttribute("pageSize", pageSize);
-
-        return "redirect:/items";
+    public Mono<String> updateItemCount(@ModelAttribute ItemForm form, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return Mono.just("items/form");
+        }
+        Long id = form.getId();
+        String action = form.getAction();
+        return cartService.handleItemAction(id, action)
+                .thenReturn("redirect:/items?search=" + form.getSearch() + "&sort=" + form.getSort() +
+                        "&pageNumber=" + form.getPageNumber() + "&pageSize=" + form.getPageSize());
     }
 
     @GetMapping("/{id}")
-    public String viewItem(@PathVariable Long id, Model model) throws IllegalArgumentException{
-        Optional<Item> optionalItem = productService.findById(id);
+    public Mono<String> viewItem(@PathVariable Long id, Model model){
+        return productService.findById(id)
+                        .switchIfEmpty(Mono.error( new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")))
+                .flatMap(item -> cartService.getItemCountInCart(id)
+                                .defaultIfEmpty(0)
+                                        .map(countInCart -> {
+                                            model.addAttribute("item", item);
+                                            model.addAttribute("countInCart", countInCart);
 
-        model.addAttribute("item", optionalItem.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")));
-
-        int countInCart = cartService.getItemCountInCart(id);
-        model.addAttribute("countInCart", countInCart);
-
-        return "item";
+                                            return "item";
+                                        }));
     }
 
     @PostMapping("/{id}")
-    public String updateItemCount(
+    public Mono<String> updateItemCount(
             @PathVariable Long id,
-            @RequestParam String action,
-            Model model) {
-
-        cartService.handleItemAction(id, action);
-
-        Item item = productService.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден"));
-
-        int countInCart = cartService.getItemCountInCart(id);
-        model.addAttribute("countInCart", countInCart);
-
-        model.addAttribute("item", item);
-        return "item";
+            @ModelAttribute ItemForm form, BindingResult bindingResult, Model model) {
+        if (bindingResult.hasErrors()) {
+            return Mono.just("items/form");
+        }
+        String action = form.getAction();
+        return cartService.handleItemAction(id, action)
+                .then(productService.findById(id))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")))
+                .flatMap(item -> cartService.getItemCountInCart(id)
+                        .defaultIfEmpty(0)
+                        .map(countInCart -> {
+                            model.addAttribute("item", item);
+                            model.addAttribute("countInCart", countInCart);
+                            return "item";
+                        }));
     }
 }

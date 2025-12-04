@@ -1,25 +1,26 @@
 package ru.yandex.practicum.mymarket.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
 @Table(name = "items")
 public class Item {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @Column
     private String title;
     @Column
     private String description;
-    @Column
+    @Column("img_path")
     private String imgPath;
     @Column
     private long price;
-    @OneToMany(mappedBy = "item", cascade = CascadeType.REMOVE)
+    @Transient
     private List<OrderItem> orderItems = new ArrayList<>();
 
     public Item() {
