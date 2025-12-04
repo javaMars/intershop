@@ -1,18 +1,22 @@
 package ru.yandex.practicum.mymarket.controller;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import ru.yandex.practicum.mymarket.dto.ItemForm;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.PagingWrapperReactive;
 import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.ProductService;
 
+import org.springframework.data.domain.Pageable;
 import java.util.*;
 
 @Controller
@@ -44,10 +48,11 @@ public class ProductController {
         Sort sorting = (normalizedSort != null) ? SORT_STRATEGIES.get(normalizedSort) : null;
 
         Flux<Item> itemsFlux;
+        Pageable pageable = PageRequest.of(pageIndex, pageSize, sorting != null ? sorting : Sort.unsorted());
         if (search != null && !search.trim().isEmpty()) {
-            itemsFlux = productService.findByTitle(search.trim());
+            itemsFlux = productService.findByTitle(search.trim(),pageable);
         } else {
-            itemsFlux = productService.findAll();
+            itemsFlux = productService.findAll(pageable);
         }
 
         itemsFlux = itemsFlux.skip((long) pageIndex * pageSize)
@@ -78,19 +83,15 @@ public class ProductController {
     }
 
     @PostMapping
-    public Mono<String> updateItemCount(
-            @RequestParam Long id,
-            @RequestParam(required = false, defaultValue = "") String search,
-            @RequestParam(required = false, defaultValue = "NO") String sort,
-            @RequestParam(required = false, defaultValue = "0") int pageNumber,
-            @RequestParam(required = false, defaultValue = "5") int pageSize,
-            @RequestParam String action) {
-
+    public Mono<String> updateItemCount(@ModelAttribute ItemForm form, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return Mono.just("items/form");
+        }
+        Long id = form.getId();
+        String action = form.getAction();
         return cartService.handleItemAction(id, action)
-                        .then(Mono.just("redirect:/items?search=" + search +
-                                "&sort=" + sort +
-                                "pageNumber=" + pageNumber +
-                                "pageSize=" + pageSize));
+                .thenReturn("redirect:/items?search=" + form.getSearch() + "&sort=" + form.getSort() +
+                        "&pageNumber=" + form.getPageNumber() + "&pageSize=" + form.getPageSize());
     }
 
     @GetMapping("/{id}")
@@ -110,8 +111,11 @@ public class ProductController {
     @PostMapping("/{id}")
     public Mono<String> updateItemCount(
             @PathVariable Long id,
-            @RequestParam String action,
-            Model model) {
+            @ModelAttribute ItemForm form, BindingResult bindingResult, Model model) {
+        if (bindingResult.hasErrors()) {
+            return Mono.just("items/form");
+        }
+        String action = form.getAction();
         return cartService.handleItemAction(id, action)
                 .then(productService.findById(id))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")))

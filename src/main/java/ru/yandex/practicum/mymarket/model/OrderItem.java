@@ -1,7 +1,6 @@
 package ru.yandex.practicum.mymarket.model;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -20,12 +19,6 @@ public class OrderItem {
     @Column("count")
     private int count;
 
-    @Transient
-    private Order order;    // Для удобства в коде
-
-    @Transient
-    private Item item;
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -34,12 +27,6 @@ public class OrderItem {
 
     public Long getItemId() { return itemId; }
     public void setItemId(Long itemId) { this.itemId = itemId; }
-
-    public Order getOrder() { return order; }
-    public void setOrder(Order order) { this.order = order; }
-
-    public Item getItem() { return item; }
-    public void setItem(Item item) { this.item = item; }
 
     public int getCount() { return count; }
     public void setCount(int count) { this.count = count; }

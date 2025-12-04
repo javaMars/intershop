@@ -12,8 +12,12 @@ import ru.yandex.practicum.mymarket.model.*;
 public interface CartItemRepository extends ReactiveCrudRepository<CartItem, Long> {
     Mono<CartItem> findByCartIdAndItemId(Long cartId, Long itemId);
 
+    @Query("SELECT * FROM cart_items ci WHERE ci.cart_id = :cartId;")
     Flux<CartItem> findByCartId(Long cartId);
 
-    @Query("DELETE FROM cart_items ci WHERE ci.cart_id = :cartId AND ci.item_id = :itemId")
+    @Query("DELETE FROM cart_items ci WHERE ci.cart_id = :cartId AND ci.item_id = :itemId;")
     Mono<Long> deleteByCartIdAndItemId(Long cartId, Long itemId);
+
+    @Query("DELETE FROM cart_items ci WHERE ci.cart_id = :cartId;")
+    Mono<Long> deleteByCartId(Long cartId);
 }

@@ -32,4 +32,12 @@ public class PagingWrapperReactive {
     public long getTotalElements() {
         return totalElements;
     }
+
+    public boolean hasPrevious() {
+        return pageNumber > 0;
+    }
+
+    public boolean hasNext() {
+        return pageNumber + 1 < totalPages;
+    }
 }

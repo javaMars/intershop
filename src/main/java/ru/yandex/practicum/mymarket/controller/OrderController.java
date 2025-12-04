@@ -21,10 +21,10 @@ public class OrderController {
     public Mono<String> viewAllOrders(Model model) {
         return orderService.findAllOrders()
                 .collectList()
-                        .map(orders -> {
-                            model.addAttribute("orders", orders);
-                            return "orders";
-                        });
+                .map(orders -> {
+                    model.addAttribute("orders", orders);
+                    return "orders";
+                });
     }
 
     @GetMapping("/orders/{id}")
@@ -41,6 +41,6 @@ public class OrderController {
     public Mono<String> createOrder() {
         return orderService.createFromCart()
                             .flatMap(order -> Mono.just("redirect:/orders/" + order.getId() + "?newOrder=true"))
-                .onErrorReturn("redirect:/cart");
+                .onErrorReturn("redirect:/cart/items");
     }
 }

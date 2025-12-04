@@ -2,10 +2,10 @@ package ru.yandex.practicum.mymarket.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import ru.yandex.practicum.mymarket.dto.ItemDto;
 import ru.yandex.practicum.mymarket.model.Cart;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
@@ -13,10 +13,11 @@ import ru.yandex.practicum.mymarket.repository.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
-@EnableTransactionManagement
-public class CartServiceImpl implements CartService  {
+public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
@@ -27,35 +28,81 @@ public class CartServiceImpl implements CartService  {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
-        this.cart = cartRepository.save(new Cart());
+        this.cart = cartRepository.findLastCart();
+    }
+
+    public Mono<Cart> findLastCart() {
+        return cartRepository.findLastCart()
+                .switchIfEmpty(Mono.just(new Cart()));
     }
 
     public Flux<CartItem> findCartItems() {
-        return cart.flatMapMany(cartFunc ->
-                cartItemRepository.findByCartId(cartFunc.getId())
-        );
+        return findLastCart()
+                .flatMapMany(cart -> {
+                    Long cartId = cart.getId();
+                    if (cartId == null) {
+                        return Flux.empty();
+                    }
+                    return cartItemRepository.findByCartId(cartId);
+                });
     }
 
     public Mono<Integer> getItemCountInCart(Long itemId) {
-        return cart.flatMap(cartObj ->
-                productRepository.findById(itemId)
-                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
-                        .flatMap(item ->
-                                cartItemRepository.findByCartIdAndItemId(cartObj.getId(),item.getId())
-                                        .map(CartItem::getCount)
-                                        .defaultIfEmpty(0)
-                        )
+        return findLastCart()
+                .flatMap(cartObj ->
+                        productRepository.findById(itemId)
+                                .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                                .flatMap(item ->
+                                        cartItemRepository.findByCartIdAndItemId(cartObj.getId(), item.getId())
+                                                .map(CartItem::getCount)
+                                                .defaultIfEmpty(0)
+                                )
                 );
     }
 
-    public Mono<Map<Long, Integer>> getItemCountsMap() {
-        return cart.flatMapMany(cartFunc -> cartItemRepository.findByCartId(cartFunc.getId())
-                )
-                .collectMap(
-                        cartItem -> cartItem.getItem().getId(),
-                        CartItem::getCount
-                );
+    public Mono<List<ItemDto>> findCartItemsWithDetails() {
+        return findLastCart()
+                .flatMapMany(cart -> {
+                    Long cartId = cart.getId();
+                    if (cartId == null) {
+                        return Flux.empty();
+                    }
+                    return cartItemRepository.findByCartId(cartId);
+                })
+                .collectList()
+                .flatMap(cartItems -> {
+                    List<Long> itemIds = cartItems.stream()
+                            .map(CartItem::getItemId)
+                            .collect(Collectors.toList());
 
+                    return productRepository.findAllById(itemIds)
+                            .collectList()
+                            .map(items -> {
+                                Map<Long, Item> itemMap = items.stream()
+                                        .collect(Collectors.toMap(Item::getId, Function.identity()));
+
+                                return cartItems.stream()
+                                        .map(ci -> {
+                                            Item item = itemMap.get(ci.getItemId());
+                                            return new ItemDto(item.getId(), item.getTitle(), item.getDescription(),
+                                                    item.getImgPath(), item.getPrice(), ci.getCount());
+                                        })
+                                        .collect(Collectors.toList());
+                            });
+                });
+    }
+
+    public Mono<Map<Long, Integer>> getItemCountsMap() {
+        return findLastCart()
+                .flatMapMany(cart -> {
+                    Long cartId = cart.getId();
+                    if (cartId == null) {
+                        return Flux.empty();
+                    }
+                    return cartItemRepository.findByCartId(cartId);
+                })
+                .filter(cartItem -> cartItem.getItemId() != null)
+                .collectMap(CartItem::getItemId, CartItem::getCount);
     }
 
     public Mono<Void> handleItemAction(Long itemId, String action) {
@@ -85,11 +132,10 @@ public class CartServiceImpl implements CartService  {
                                         .flatMap(cartItem -> {
                                             cartItem.setCount(cartItem.getCount() + 1);
                                             return cartItemRepository.save(cartItem);
-                                        })
+                                                    })
                         )
         ).then();
     }
-
 
     @Transactional
     Mono<Void> decreaseItemCount(Long itemId) {
@@ -101,8 +147,7 @@ public class CartServiceImpl implements CartService  {
                                         .defaultIfEmpty(new CartItem(cartObj.getId(), item.getId(), 0))
                                         .flatMap(cartItem -> {
                                             int newCount = cartItem.getCount() - 1;
-                                            if (newCount <= 0)
-                                            {
+                                            if (newCount <= 0) {
                                                 return cartItemRepository.delete(cartItem);
                                             } else {
                                                 cartItem.setCount(newCount);
