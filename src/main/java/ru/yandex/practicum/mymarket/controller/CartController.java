@@ -3,14 +3,16 @@ package ru.yandex.practicum.mymarket.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import ru.yandex.practicum.mymarket.dto.ItemForm;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.service.CartService;
 
 import java.util.List;
+
+import static java.lang.Long.sum;
 
 @Controller
 @RequestMapping("/cart/items")
@@ -24,39 +26,39 @@ public class CartController {
     }
 
     @GetMapping
-    public String viewCart(Model model) {
-        List<CartItem> cartItems = cartService.findCartItems();
-
-        long total = cartItems.stream()
-                .mapToLong(cartItem -> cartItem.getItem().getPrice() * cartItem.getCount())
-                .sum();
-
-        model.addAttribute("items", cartItems);
-        model.addAttribute("total", total);
-
-        return "cart";
+    public Mono<String> viewCart(Model model) {
+        return cartService.findCartItemsWithDetails()
+                .map(items -> {
+                    model.addAttribute("items", items);
+                    long total = items.stream()
+                            .mapToLong(i -> i.getPrice() * i.getCount())
+                            .sum();
+                    model.addAttribute("total", total);
+                    return "cart";
+                });
     }
 
     @PostMapping
-    public String updateCartItem(
-            @RequestParam("id") Long itemId,
-            @RequestParam("action") String action,
+    public Mono<String> updateCartItem(
+            @ModelAttribute ItemForm form,
+            BindingResult bindingResult,
             Model model
     ) {
-        try {
-            cartService.handleItemAction(itemId, action);
-        } catch (Exception e) {
-            model.addAttribute("error", "Ошибка при обработке действия");
+        if (bindingResult.hasErrors()) {
+            return Mono.just("cart/items/form");
         }
+        Long itemId = form.getId();
+        String action = form.getAction();
 
-        List<CartItem> cartItems = cartService.findCartItems();
-        long total = cartItems.stream()
-                .mapToLong(item -> item.getItem().getPrice() * item.getCount())
-                .sum();
-
-        model.addAttribute("items", cartItems);
-        model.addAttribute("total", total);
-
-        return "cart";
+        return cartService.handleItemAction(itemId, action)
+                .then(cartService.findCartItemsWithDetails())
+                .map(items -> {
+                    model.addAttribute("items", items);
+                    long total = items.stream()
+                            .mapToLong(i -> i.getPrice() * i.getCount())
+                            .sum();
+                    model.addAttribute("total", total);
+                    return "cart";
+                });
     }
 }
