@@ -40,7 +40,7 @@ public class OrderController {
     @PostMapping("/buy")
     public Mono<String> createOrder() {
         return orderService.createFromCart()
-                            .flatMap(order -> Mono.just("redirect:/orders/" + order.getId() + "?newOrder=true"))
+                .flatMap(order -> Mono.just("redirect:/orders/" + order.getId() + "?newOrder=true"))
                 .onErrorReturn("redirect:/cart/items");
     }
 }

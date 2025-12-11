@@ -8,7 +8,12 @@ public class Cart {
     @Id
     private Long id;
 
-    public long getId() {
+    public Cart() { }
+
+    public Long getId() {
         return id;
+    }
+
+    public void setId(Long l) {
     }
 }

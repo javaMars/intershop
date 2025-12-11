@@ -19,11 +19,7 @@ public class CartItem {
     @Column("count")
     private Integer count = 1;
 
-    @Transient
-    private Cart cart;
-
-    @Transient
-    private Item item;
+    public CartItem() { }
 
     public CartItem(Long cartId, Long itemId, int count) {
         this.cartId = cartId;
@@ -38,12 +34,6 @@ public class CartItem {
 
     public Long getItemId() { return itemId; }
     public void setItemId(Long itemId) { this.itemId = itemId; }
-
-    public Cart getCart() { return cart; }
-    public void setCart(Cart cart) { this.cart = cart; }
-
-    public Item getItem() { return item; }
-    public void setItem(Item item) { this.item = item; }
 
     public Integer getCount() { return count; }
     public void setCount(Integer count) { this.count = count; }

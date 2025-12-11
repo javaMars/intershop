@@ -65,7 +65,7 @@ public class ProductController {
                     for (int i = 0; i < filteredItems.size(); i += 3) {
                         List<Item> partItems = new ArrayList<>(filteredItems.subList(i, Math.min(i + 3, filteredItems.size())));
                         while (partItems.size() < 3) {
-                            partItems.add(new Item(-1L, "", "", "", 0L, 0)); // заглушка
+                            partItems.add(Item.dummyItem());// заглушка
                         }
                         itemsByGroup.add(partItems);
                     }
@@ -97,15 +97,15 @@ public class ProductController {
     @GetMapping("/{id}")
     public Mono<String> viewItem(@PathVariable Long id, Model model){
         return productService.findById(id)
-                        .switchIfEmpty(Mono.error( new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")))
+                .switchIfEmpty(Mono.error( new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")))
                 .flatMap(item -> cartService.getItemCountInCart(id)
-                                .defaultIfEmpty(0)
-                                        .map(countInCart -> {
-                                            model.addAttribute("item", item);
-                                            model.addAttribute("countInCart", countInCart);
+                        .defaultIfEmpty(0)
+                        .map(countInCart -> {
+                            model.addAttribute("item", item);
+                            model.addAttribute("countInCart", countInCart);
 
-                                            return "item";
-                                        }));
+                            return "item";
+                        }));
     }
 
     @PostMapping("/{id}")

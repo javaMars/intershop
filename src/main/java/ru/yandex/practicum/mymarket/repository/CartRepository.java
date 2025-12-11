@@ -6,8 +6,6 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.model.Cart;
 
-import org.springframework.data.domain.Pageable;
-
 @Repository
 public interface CartRepository extends ReactiveCrudRepository<Cart, Long> {
 

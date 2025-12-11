@@ -7,12 +7,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.dto.ItemForm;
-import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.service.CartService;
-
-import java.util.List;
-
-import static java.lang.Long.sum;
 
 @Controller
 @RequestMapping("/cart/items")

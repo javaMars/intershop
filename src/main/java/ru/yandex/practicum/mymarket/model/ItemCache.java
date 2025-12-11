@@ -1,31 +1,27 @@
 package ru.yandex.practicum.mymarket.model;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.redis.core.RedisHash;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Table("items")
-public class Item {
-
+@RedisHash("items")
+public class ItemCache {
     @Id
-    @Column("id")
-    private Long id;
+    private String id;
     private String title;
     private String description;
     private String imgPath;
-    private long price;
+    private String price;
+
 
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    public Item() {
+    public ItemCache() {
     }
 
-    public Item(Long id, String title, String description, String imgPath, long price, int count) {
+    public ItemCache(String id, String title, String description, String imgPath, String price) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -33,11 +29,11 @@ public class Item {
         this.price = price;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -65,23 +61,11 @@ public class Item {
         this.imgPath = imgPath;
     }
 
-    public long getPrice() {
+    public String getPrice() {
         return price;
     }
 
-    public void setPrice(long price) {
+    public void setPrice(String price) {
         this.price = price;
-    }
-
-    public List<OrderItem> getOrderItems() {
-        return orderItems;
-    }
-
-    public void setOrderItems(List<OrderItem> orderItems) {
-        this.orderItems = orderItems;
-    }
-
-    public static Item dummyItem() {
-        return new Item();
     }
 }

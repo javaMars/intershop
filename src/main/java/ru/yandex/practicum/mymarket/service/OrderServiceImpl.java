@@ -1,6 +1,5 @@
 package ru.yandex.practicum.mymarket.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -9,20 +8,19 @@ import ru.yandex.practicum.mymarket.model.*;
 import ru.yandex.practicum.mymarket.repository.*;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl implements OrderService {
-    @Autowired
+
     private final OrderRepository orderRepository;
-    @Autowired
+
     private final OrderItemRepository orderItemRepository;
-    @Autowired
+
     private final CartRepository cartRepository;
-    @Autowired
+
     private final CartItemRepository cartItemRepository;
-    @Autowired
+
     private final ProductRepository productRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository, OrderItemRepository orderItemRepository, CartRepository cartRepository, CartItemRepository cartItemRepository, ProductRepository productRepository) {
@@ -93,8 +91,6 @@ public class OrderServiceImpl implements OrderService {
                 });
     }
 
-
-
     private Mono<OrderItemDto> convertToItemDto(OrderItem item) {
         return productRepository.findById(item.getItemId())
                 .map(product -> {
@@ -115,69 +111,56 @@ public class OrderServiceImpl implements OrderService {
                 }));
     }
 
-
     public Mono<OrderDto> findOrder(Long id) {
         return orderRepository.findById(id)
                 .flatMap(order ->
                         orderItemRepository.findByOrderId(id)
-                                .collectList()  // Получаем List<OrderItem>
-                                .flatMap(orderItems -> convertToDto(order, orderItems))  // Передаем оба объекта
+                                .collectList()
+                                .flatMap(orderItems -> convertToDto(order, orderItems))
                 )
                 .onErrorResume(e -> {
-                    System.err.println("Ошибка при получении заказа " + id + ": " + e.getMessage());
                     return Mono.empty();
                 });
     }
-
-
     public Mono<Order> createFromCart() {
-
         return cartRepository.findLastCart()
                 .switchIfEmpty(Mono.error(new RuntimeException("Корзина не найдена")))
-                .flatMap(cart -> {
-                    System.out.println("Обработка корзины ID: " + cart.getId());
+                .flatMap(cart ->
+                        cartItemRepository.findByCartId(cart.getId())
+                                .map(cartItem -> {
+                                    OrderItem orderItem = new OrderItem();
+                                    orderItem.setItemId(cartItem.getItemId());
+                                    orderItem.setCount(cartItem.getCount());
+                                    return orderItem;
+                                })
+                                .collectList()
+                                .flatMap(orderItems -> {
+                                    if (orderItems.isEmpty()) {
+                                        return Mono.error(new RuntimeException("Корзина пуста"));
+                                    }
+                                    return createOrderFromItems(orderItems, cart.getId());
+                                })
+                );
+    }
 
-                    return cartItemRepository.findByCartId(cart.getId())
-                            .doOnNext(cartItem -> System.out.println("Товар из корзины: itemId=" + cartItem.getItemId()))
-                            .map(cartItem -> {
-                                OrderItem orderItem = new OrderItem();
-                                orderItem.setItemId(cartItem.getItemId());
-                                orderItem.setCount(cartItem.getCount());
-                                return orderItem;
-                            })
-                            .collectList()
-                            .switchIfEmpty(Mono.error(new RuntimeException("Корзина пуста")))
-                            .flatMap(orderItems -> {
-                                System.out.println("Найдено товаров для заказа: " + orderItems.size());
-
-                                Order order = new Order();
-
-                                return calculateTotalSum(orderItems)
-                                        .doOnError(err -> System.err.println("Ошибка расчёта суммы: " + err.getMessage()))
-                                        .doOnNext(sum -> {
-                                            System.out.println("Итоговая сумма заказа: " + sum);
-                                            order.setTotalSum(sum);
-                                        })
-                                        .flatMap(sum -> orderRepository.save(order))
-                                        .doOnSuccess(saved -> System.out.println("Заказ сохранён: ID=" + saved.getId()))
-                                        .doOnError(err -> System.err.println("Ошибка сохранения заказа: " + err.getMessage()))
-                                        .flatMap(savedOrder -> {
-                                            Flux<OrderItem> savedItems = Flux.fromIterable(orderItems)
-                                                    .doOnNext(oi -> oi.setOrderId(savedOrder.getId()))
-                                                    .flatMap(orderItemRepository::save)
-                                                    .doOnError(err -> System.err.println("Ошибка сохранения OrderItem: " + err.getMessage()));
-
-                                            return savedItems
-                                                    .then(Mono.just(savedOrder))
-                                                    .doOnError(err -> System.err.println("Ошибка в savedItems: " + err.getMessage()));
-                                        })
-                                        .flatMap(savedOrder ->
-                                                cartItemRepository.deleteByCartId(cart.getId())
-                                                        .doOnError(err -> System.err.println("Ошибка очистки корзины: " + err.getMessage()))
-                                                        .thenReturn(savedOrder)
-                                        );
-                            });
-                });
+    private Mono<Order> createOrderFromItems(List<OrderItem> orderItems, Long cartId) {
+        return calculateTotalSum(orderItems)
+                .map(totalSum -> {
+                    Order order = new Order();
+                    order.setTotalSum(totalSum);
+                    return order;
+                })
+                .flatMap(orderRepository::save)
+                .flatMap(savedOrder ->
+                        Flux.fromIterable(orderItems)
+                                .doOnNext(oi -> oi.setOrderId(savedOrder.getId()))
+                                .flatMap(orderItemRepository::save)
+                                .then(Mono.just(savedOrder))
+                )
+                .flatMap(savedOrder ->
+                        cartItemRepository.deleteByCartId(cartId)
+                                .thenReturn(savedOrder)
+                );
     }
 
     private Mono<Long> calculateTotalSum(List<OrderItem> orderItems) {
@@ -187,5 +170,4 @@ public class OrderServiceImpl implements OrderService {
                         .map(item -> (long) item.getPrice() * oi.getCount()))
                 .reduce(0L, Long::sum);
     }
-
 }

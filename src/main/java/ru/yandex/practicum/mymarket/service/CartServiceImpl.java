@@ -1,8 +1,6 @@
 package ru.yandex.practicum.mymarket.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.dto.ItemDto;
@@ -23,7 +21,6 @@ public class CartServiceImpl implements CartService {
     private final ProductRepository productRepository;
     private final Mono<Cart> cart;
 
-    @Autowired
     public CartServiceImpl(CartRepository cartRepository, CartItemRepository cartItemRepository, ProductRepository productRepository) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
@@ -121,23 +118,44 @@ public class CartServiceImpl implements CartService {
                 });
     }
 
-    @Transactional
-    Mono<Void> increaseItemCount(Long itemId) {
-        return cart.flatMap(cartObj ->
-                productRepository.findById(itemId)
-                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
-                        .flatMap(item ->
-                                cartItemRepository.findByCartIdAndItemId(cartObj.getId(), item.getId())
-                                        .defaultIfEmpty(new CartItem(cartObj.getId(), item.getId(), 0))
-                                        .flatMap(cartItem -> {
-                                            cartItem.setCount(cartItem.getCount() + 1);
-                                            return cartItemRepository.save(cartItem);
-                                                    })
-                        )
-        ).then();
+    private Mono<Cart> getCurrentCart() {
+        return
+                cartRepository.findLastCart()
+                        .switchIfEmpty(
+                                Mono.defer(() -> {
+                                    Cart newCart = new Cart();
+                                    return cartRepository.save(newCart);
+                                })
+                        );
     }
 
-    @Transactional
+    Mono<Void> increaseItemCount(Long itemId) {
+        return getCurrentCart()
+                .flatMap(cartObj -> {
+                    Long cartId = cartObj.getId();
+
+                    return productRepository.findById(itemId)
+                            .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                            .flatMap(item ->
+                                    cartItemRepository.findByCartIdAndItemId(cartId, item.getId())
+                                            .switchIfEmpty(Mono.fromCallable(() -> createNewCartItem(cartId, item.getId())))
+                                            .flatMap(cartItem -> {
+                                                cartItem.setCount(cartItem.getCount() + 1);
+                                                return cartItemRepository.save(cartItem);
+                                            })
+                            );
+                })
+                .then();
+    }
+
+    private CartItem createNewCartItem(Long cartId, Long itemId) {
+        CartItem newItem = new CartItem();
+        newItem.setCartId(cartId);
+        newItem.setItemId(itemId);
+        newItem.setCount(0);
+        return newItem;
+    }
+
     Mono<Void> decreaseItemCount(Long itemId) {
         return cart.flatMap(cartObj ->
                 productRepository.findById(itemId)
@@ -158,7 +176,6 @@ public class CartServiceImpl implements CartService {
         ).then();
     }
 
-    @Transactional
     Mono<Void> removeItem(Long itemId) {
         return cart.flatMap(cartObj ->
                 productRepository.findById(itemId)
