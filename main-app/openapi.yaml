@@ -1,0 +1,94 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  description: REST API для проверки баланса и оплаты заказов
+  version: 1.0.0
+
+paths:
+  /api/payments/getBalance/{userId}:
+    get:
+      summary: Получить баланс пользователя
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Ошибка сервера
+
+  /api/payments/pay:
+    post:
+      summary: Оформить платеж
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Недостаточно средств
+        '404':
+          description: Пользователь не найден
+        '500':
+          description: Ошибка сервера
+
+components:
+  schemas:
+    Balance:
+      type: object
+      properties:
+        userId:
+          type: string
+        balance:
+          type: number
+          format: double
+      required:
+        - userId
+        - balance
+
+    PaymentRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        orderId:
+          type: string
+        amount:
+          type: number
+          format: double
+      required:
+        - userId
+        - amount
+
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        userId:
+          type: string
+        remainingBalance:
+          type: number
+          format: double
+        orderId:
+          type: string
+      required:
+        - success
+        - userId
