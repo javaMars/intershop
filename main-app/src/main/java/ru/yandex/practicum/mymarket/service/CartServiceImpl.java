@@ -33,17 +33,6 @@ public class CartServiceImpl implements CartService {
                 .switchIfEmpty(Mono.just(new Cart()));
     }
 
-    public Flux<CartItem> findCartItems() {
-        return findLastCart()
-                .flatMapMany(cart -> {
-                    Long cartId = cart.getId();
-                    if (cartId == null) {
-                        return Flux.empty();
-                    }
-                    return cartItemRepository.findByCartId(cartId);
-                });
-    }
-
     public Mono<Integer> getItemCountInCart(Long itemId) {
         return findLastCart()
                 .flatMap(cartObj ->

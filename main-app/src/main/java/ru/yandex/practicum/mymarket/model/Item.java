@@ -1,13 +1,9 @@
 package ru.yandex.practicum.mymarket.model;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
-import org.springframework.data.redis.core.RedisHash;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.util.ArrayList;
-import java.util.List;
 
 @Table("items")
 public class Item {
@@ -15,17 +11,19 @@ public class Item {
     @Id
     @Column("id")
     private Long id;
+    @Column("title")
     private String title;
+    @Column("description")
     private String description;
+    @Column("img_path")
     private String imgPath;
+    @Column("price")
     private long price;
-
-    private List<OrderItem> orderItems = new ArrayList<>();
 
     public Item() {
     }
 
-    public Item(Long id, String title, String description, String imgPath, long price, int count) {
+    public Item(Long id, String title, String description, String imgPath, long price) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -71,14 +69,6 @@ public class Item {
 
     public void setPrice(long price) {
         this.price = price;
-    }
-
-    public List<OrderItem> getOrderItems() {
-        return orderItems;
-    }
-
-    public void setOrderItems(List<OrderItem> orderItems) {
-        this.orderItems = orderItems;
     }
 
     public static Item dummyItem() {

@@ -92,3 +92,5 @@ components:
       required:
         - success
         - userId
+        - remainingBalance
+        - orderId

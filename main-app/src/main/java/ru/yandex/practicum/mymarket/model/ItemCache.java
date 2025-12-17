@@ -3,9 +3,6 @@ package ru.yandex.practicum.mymarket.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @RedisHash("items")
 public class ItemCache {
     @Id
@@ -14,9 +11,6 @@ public class ItemCache {
     private String description;
     private String imgPath;
     private String price;
-
-
-    private List<OrderItem> orderItems = new ArrayList<>();
 
     public ItemCache() {
     }

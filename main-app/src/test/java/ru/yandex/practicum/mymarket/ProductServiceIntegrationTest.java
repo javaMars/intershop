@@ -77,7 +77,7 @@ public class ProductServiceIntegrationTest {
 
     @Test
     void testCacheSerialization() {
-        Item item = new Item(1L, "Test", "Desc", "img.jpg", 100L, 1);
+        Item item = new Item(1L, "Test", "Desc", "img.jpg", 100L);
         ItemCache cache = productService.toCache(item).block();
         Item restored = productService.toDb(cache).block();
     }
@@ -118,8 +118,7 @@ public class ProductServiceIntegrationTest {
                                         row.get("title", String.class),
                                         row.get("description", String.class),
                                         row.get("img_path", String.class),
-                                        row.get("price", Long.class),
-                                        row.get("cnt", Integer.class)
+                                        row.get("price", Long.class)
                                 ))
                                 .one()
                 )

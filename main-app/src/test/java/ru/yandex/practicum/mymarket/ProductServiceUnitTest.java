@@ -39,7 +39,7 @@ class ProductServiceUnitTest {
         when(itemRedisTemplate.opsForValue()).thenReturn(redisValueOps);
         when(redisValueOps.get(any())).thenReturn(Mono.empty());
         when(redisValueOps.set(any(), any(), any())).thenReturn(Mono.empty());
-        when(productRepository.findById(123L)).thenReturn(Mono.just(new Item(123L, "Test", "", "", 1L, 100)));
+        when(productRepository.findById(123L)).thenReturn(Mono.just(new Item(123L, "Test", "", "", 1L)));
 
         StepVerifier.create(productService.findById(123L)).expectNextCount(1).verifyComplete();
     }
@@ -52,7 +52,7 @@ class ProductServiceUnitTest {
 
         Pageable pageable = PageRequest.of(0, 10);
         when(productRepository.findIds(pageable)).thenReturn(Flux.just(1L));
-        when(productRepository.findById(1L)).thenReturn(Mono.just(new Item(1L, "Test", "", "", 1L, 100)));
+        when(productRepository.findById(1L)).thenReturn(Mono.just(new Item(1L, "Test", "", "", 1L)));
 
         StepVerifier.create(productService.findAll(pageable)).expectNextCount(1).verifyComplete();
     }
@@ -60,7 +60,7 @@ class ProductServiceUnitTest {
     @Test
     void findByTitle_shouldDelegateToRepository() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(productRepository.findByTitleContaining("test", pageable)).thenReturn(Flux.just(new Item(1L, "Test", "", "", 1L, 100)));
+        when(productRepository.findByTitleContaining("test", pageable)).thenReturn(Flux.just(new Item(1L, "Test", "", "", 1L)));
 
         StepVerifier.create(productService.findByTitle("test", pageable)).expectNextCount(1).verifyComplete();
     }

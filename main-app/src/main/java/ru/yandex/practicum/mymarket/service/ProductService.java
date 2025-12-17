@@ -10,5 +10,4 @@ public interface ProductService {
     Flux<Item> findAll(Pageable pageable);
     Flux<Item> findByTitle(String trim, Pageable pageable);
     Mono<Item> findById(Long id);
-
 }

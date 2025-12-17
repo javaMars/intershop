@@ -59,13 +59,31 @@
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.13.0</version>
+                        <configuration>
+                            <source>21</source>
+                            <target>21</target>
+                            <parameters>true</parameters>  <!-- ✅ ЗДЕСЬ работает! -->
+                        </configuration>
+                    </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.openapitools</groupId>
@@ -82,7 +100,6 @@
                             <apiPackage>ru.yandex.practicum.payment.api</apiPackage>
                             <modelPackage>ru.yandex.practicum.payment.model</modelPackage>
                             <configOptions>
-                                <library>spring-boot</library>
                                 <interfaceOnly>true</interfaceOnly>
                                 <reactive>true</reactive>
                                 <useSpringBoot3>true</useSpringBoot3>

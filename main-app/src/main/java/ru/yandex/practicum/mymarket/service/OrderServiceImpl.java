@@ -36,7 +36,7 @@ public class OrderServiceImpl implements OrderService {
                 .flatMap(order ->
                         orderItemRepository.findByOrderId(order.getId())
                                 .collectList()
-                                .flatMap(orderItems -> convertToDto(order, orderItems))  // ← flatMap вместо map
+                                .flatMap(orderItems -> convertToDto(order, orderItems))
                 )
                 .onErrorResume(e -> {
                     System.err.println("Ошибка при получении заказов: " + e.getMessage());
@@ -91,26 +91,6 @@ public class OrderServiceImpl implements OrderService {
                 });
     }
 
-    private Mono<OrderItemDto> convertToItemDto(OrderItem item) {
-        return productRepository.findById(item.getItemId())
-                .map(product -> {
-                    OrderItemDto dto = new OrderItemDto();
-                    dto.setId(item.getId());
-                    dto.setItemId(item.getItemId());
-                    dto.setCount(item.getCount());
-                    dto.setPrice(product.getPrice());  // добавляем
-                    dto.setTitle(product.getTitle());   // добавляем
-                    return dto;
-                })
-                .switchIfEmpty(Mono.fromSupplier(() -> {
-                    OrderItemDto dto = new OrderItemDto();
-                    dto.setId(item.getId());
-                    dto.setItemId(item.getItemId());
-                    dto.setCount(item.getCount());
-                    return dto;
-                }));
-    }
-
     public Mono<OrderDto> findOrder(Long id) {
         return orderRepository.findById(id)
                 .flatMap(order ->
@@ -122,7 +102,8 @@ public class OrderServiceImpl implements OrderService {
                     return Mono.empty();
                 });
     }
-    public Mono<Order> createFromCart() {
+
+    public Mono<OrderDto> createFromCart() {
         return cartRepository.findLastCart()
                 .switchIfEmpty(Mono.error(new RuntimeException("Корзина не найдена")))
                 .flatMap(cart ->
@@ -138,29 +119,29 @@ public class OrderServiceImpl implements OrderService {
                                     if (orderItems.isEmpty()) {
                                         return Mono.error(new RuntimeException("Корзина пуста"));
                                     }
-                                    return createOrderFromItems(orderItems, cart.getId());
+                                    return createOrderDtoFromItems(orderItems, cart.getId());
                                 })
                 );
     }
 
-    private Mono<Order> createOrderFromItems(List<OrderItem> orderItems, Long cartId) {
+    private Mono<OrderDto> createOrderDtoFromItems(List<OrderItem> orderItems, Long cartId) {
         return calculateTotalSum(orderItems)
-                .map(totalSum -> {
+                .flatMap(totalSum -> {
                     Order order = new Order();
                     order.setTotalSum(totalSum);
-                    return order;
-                })
-                .flatMap(orderRepository::save)
-                .flatMap(savedOrder ->
-                        Flux.fromIterable(orderItems)
-                                .doOnNext(oi -> oi.setOrderId(savedOrder.getId()))
-                                .flatMap(orderItemRepository::save)
-                                .then(Mono.just(savedOrder))
-                )
-                .flatMap(savedOrder ->
-                        cartItemRepository.deleteByCartId(cartId)
-                                .thenReturn(savedOrder)
-                );
+                    return orderRepository.save(order)
+                            .flatMap(savedOrder -> {
+                                return Flux.fromIterable(orderItems)
+                                        .doOnNext(oi -> oi.setOrderId(savedOrder.getId()))
+                                        .flatMap(orderItemRepository::save)
+                                        .then(Mono.just(savedOrder))
+                                        .flatMap(savedOrderWithItems ->
+                                                convertToDto(savedOrderWithItems, orderItems)
+                                        )
+                                        .then(cartItemRepository.deleteByCartId(cartId))
+                                        .then(convertToDto(savedOrder, orderItems));
+                            });
+                });
     }
 
     private Mono<Long> calculateTotalSum(List<OrderItem> orderItems) {
@@ -169,5 +150,10 @@ public class OrderServiceImpl implements OrderService {
                         .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден: " + oi.getItemId())))
                         .map(item -> (long) item.getPrice() * oi.getCount()))
                 .reduce(0L, Long::sum);
+    }
+
+    public Mono<Void> cancelOrder(Long orderId) {
+        return orderItemRepository.deleteItemsByOrderId(orderId)
+                .then(orderRepository.deleteById(orderId));
     }
 }

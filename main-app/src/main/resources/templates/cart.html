@@ -46,12 +46,22 @@
         </div>
         <div class="row p-2">
             <div class="col">
-                <form action="/buy" method="post" th:if="${!items.isEmpty()}">
+                <div th:if="${!paymentError}">
+                    <p><strong>Баланс:</strong> <span th:text="${balance} + ' ₽'">---</span></p>
+                </div>
+                <form th:action="@{/buy}" method="post"
+                      th:if="${canPay and !#lists.isEmpty(items)}">
                     <div class="hstack gap-3">
-                        <h2 th:text="'Итого: '+${total}+' руб.'"/>
-                        <button class="btn btn-warning ms-auto">Купить</button>
+                        <h2 th:text="'Итого: ' + ${total} + ' ₽'">Итого</h2>
+                        <button class="btn btn-success ms-auto">Купить</button>
                     </div>
                 </form>
+                <div th:if="${!canPay and !paymentError and !#lists.isEmpty(items)}" class="alert alert-warning">
+                    Недостаточно средств! Баланс: <span th:text="${balance}"></span> ₽
+                </div>
+                <div th:if="${paymentError}" class="alert alert-danger">
+                    Платежный сервис недоступен
+                </div>
             </div>
         </div>
     </div>
