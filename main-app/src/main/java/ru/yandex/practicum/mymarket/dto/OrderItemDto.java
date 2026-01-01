@@ -5,8 +5,10 @@ public class OrderItemDto {
     private Long id;
     private Long itemId;
     private int count;
-    private Long price;      // добавляем
+    private Long price;
     private String title;
+
+    public OrderItemDto() {}
 
     public Long getId() {
         return id;
@@ -32,10 +34,9 @@ public class OrderItemDto {
         this.count = count;
     }
 
-    public Long getPrice() { return price; }  // ← геттер
+    public Long getPrice() { return price; }
     public void setPrice(Long price) { this.price = price;}
-    public String getTitle() { return title; }  // ← геттер
+    public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title;}
-
 }
 

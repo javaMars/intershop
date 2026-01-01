@@ -9,7 +9,7 @@ import java.util.Map;
 
 public interface CartService {
     Mono<Integer> getItemCountInCart(Long itemId);
-    Mono<List<ItemDto>> findCartItemsWithDetails();
+    Mono<List<ItemDto>> findCartItemsWithDetails(String userId);
     Mono<Map<Long, Integer>> getItemCountsMap();
     Mono<Void> handleItemAction(Long itemId, String action);
     Mono<Cart> findLastCart();

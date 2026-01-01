@@ -7,6 +7,7 @@ public class ItemForm {
     private int pageNumber;
     private int pageSize;
     private String action;
+    public ItemForm() {}
 
     public Long getId() {
         return id;

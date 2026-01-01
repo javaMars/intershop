@@ -1,10 +1,12 @@
 package ru.yandex.practicum.mymarket.model;
 
 public class PagingWrapperReactive {
-    private final int pageSize;
-    private final int pageNumber;
-    private final long totalElements;
-    private final int totalPages;
+    private int pageSize;
+    private int pageNumber;
+    private long totalElements;
+    private int totalPages;
+
+    public PagingWrapperReactive() {}
 
     public PagingWrapperReactive(int pageSize, int pageNumber, long totalElements) {
         this.pageSize = pageSize;

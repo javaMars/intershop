@@ -1,6 +1,8 @@
 package ru.yandex.practicum.mymarket.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.dto.*;
@@ -31,20 +33,17 @@ public class OrderServiceImpl implements OrderService {
         this.orderItemRepository = orderItemRepository;
     }
 
-    public Flux<OrderDto> findAllOrders() {
-        return orderRepository.findAll()
+    public Flux<OrderDto> findOrdersByUserId(String userId){
+        return orderRepository.findByUserId(userId)
                 .flatMap(order ->
                         orderItemRepository.findByOrderId(order.getId())
                                 .collectList()
                                 .flatMap(orderItems -> convertToDto(order, orderItems))
                 )
-                .onErrorResume(e -> {
-                    System.err.println("Ошибка при получении заказов: " + e.getMessage());
-                    return Flux.empty();
-                });
+                .onErrorResume(e ->
+                        Flux.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Заказы не найдены для : " + userId, e)));
     }
-
-
 
     private Mono<OrderDto> convertToDto(Order order, List<OrderItem> orderItems) {
         if (orderItems.isEmpty()) {
@@ -98,49 +97,46 @@ public class OrderServiceImpl implements OrderService {
                                 .collectList()
                                 .flatMap(orderItems -> convertToDto(order, orderItems))
                 )
-                .onErrorResume(e -> {
-                    return Mono.empty();
-                });
+                .onErrorResume(e ->
+                        Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Заказ не найден: " + id, e)));
     }
 
-    public Mono<OrderDto> createFromCart() {
-        return cartRepository.findLastCart()
-                .switchIfEmpty(Mono.error(new RuntimeException("Корзина не найдена")))
-                .flatMap(cart ->
-                        cartItemRepository.findByCartId(cart.getId())
-                                .map(cartItem -> {
-                                    OrderItem orderItem = new OrderItem();
-                                    orderItem.setItemId(cartItem.getItemId());
-                                    orderItem.setCount(cartItem.getCount());
-                                    return orderItem;
-                                })
-                                .collectList()
-                                .flatMap(orderItems -> {
-                                    if (orderItems.isEmpty()) {
-                                        return Mono.error(new RuntimeException("Корзина пуста"));
-                                    }
-                                    return createOrderDtoFromItems(orderItems, cart.getId());
-                                })
-                );
-    }
+public Mono<OrderDto> createFromCart(String userId) {
+    return cartRepository.findLastCartByUserId(userId)
+            .switchIfEmpty(Mono.error(new RuntimeException("Корзина не найдена")))
+            .flatMap(cart ->
+                    cartItemRepository.findByCartId(cart.getId())
+                            .map(cartItem -> {
+                                OrderItem orderItem = new OrderItem();
+                                orderItem.setItemId(cartItem.getItemId());
+                                orderItem.setCount(cartItem.getCount());
+                                return orderItem;
+                            })
+                            .collectList()
+                            .flatMap(orderItems -> {
+                                if (orderItems.isEmpty()) {
+                                    return Mono.error(new RuntimeException("Корзина пуста"));
+                                }
+                                return createOrderDtoFromItems(orderItems, cart.getId(), userId);
+                            })
+            );
+}
 
-    private Mono<OrderDto> createOrderDtoFromItems(List<OrderItem> orderItems, Long cartId) {
+    private Mono<OrderDto> createOrderDtoFromItems(List<OrderItem> orderItems, Long cartId, String userId) {
         return calculateTotalSum(orderItems)
                 .flatMap(totalSum -> {
                     Order order = new Order();
                     order.setTotalSum(totalSum);
+                    order.setUserId(userId);
                     return orderRepository.save(order)
-                            .flatMap(savedOrder -> {
-                                return Flux.fromIterable(orderItems)
-                                        .doOnNext(oi -> oi.setOrderId(savedOrder.getId()))
-                                        .flatMap(orderItemRepository::save)
-                                        .then(Mono.just(savedOrder))
-                                        .flatMap(savedOrderWithItems ->
-                                                convertToDto(savedOrderWithItems, orderItems)
-                                        )
-                                        .then(cartItemRepository.deleteByCartId(cartId))
-                                        .then(convertToDto(savedOrder, orderItems));
-                            });
+                            .flatMap(savedOrder ->
+                                    Flux.fromIterable(orderItems)
+                                            .doOnNext(oi -> oi.setOrderId(savedOrder.getId()))
+                                            .flatMap(orderItemRepository::save)
+                                            .then(cartItemRepository.deleteByCartId(cartId))
+                                            .then(Mono.defer(() -> convertToDto(savedOrder, orderItems)))
+                            );
                 });
     }
 
@@ -155,5 +151,9 @@ public class OrderServiceImpl implements OrderService {
     public Mono<Void> cancelOrder(Long orderId) {
         return orderItemRepository.deleteItemsByOrderId(orderId)
                 .then(orderRepository.deleteById(orderId));
+    }
+
+    public Mono<Void> clearCartAfterPayment(String userId) {
+        return cartRepository.deleteByUserId(userId).then();
     }
 }

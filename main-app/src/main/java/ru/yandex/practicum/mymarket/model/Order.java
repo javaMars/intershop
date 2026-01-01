@@ -11,6 +11,8 @@ public class Order {
     private Long id;
     @Column("total_sum")
     private long totalSum;
+    @Column("user_id")
+    private String userId;
 
     public Long getId() {
         return id;
@@ -25,6 +27,14 @@ public class Order {
 
     public void setTotalSum(long totalSum) {
         this.totalSum = totalSum;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public Order() {}

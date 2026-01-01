@@ -21,6 +21,4 @@ public class AccountBalance {
     @Column("balance")
     private Double balance;
 
-    @Column("date_update")
-    private LocalDateTime dateUpdate;
 }

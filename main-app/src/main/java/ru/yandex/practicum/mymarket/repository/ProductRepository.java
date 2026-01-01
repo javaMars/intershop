@@ -13,8 +13,9 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface ProductRepository extends R2dbcRepository<Item, Long> {
     Flux<Item> findAll();
-    @Query("SELECT p.id FROM items p WHERE p.id IS NOT NULL ORDER BY p.id")
-    Flux<Long> findIds(Pageable pageable);
+
+    @Query("SELECT id FROM items ORDER BY id LIMIT :limit OFFSET :offset")
+    Flux<Long> findIds(@Param("limit") int limit, @Param("offset") int offset);
 
     Flux<Item> findAllById(Iterable<Long> ids);
 

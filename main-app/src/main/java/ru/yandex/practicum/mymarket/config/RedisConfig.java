@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -15,7 +16,7 @@ import ru.yandex.practicum.mymarket.model.ItemCache;
 @Profile("!test")
 public class RedisConfig {
 
-    @Bean("itemRedisTemplate")
+    @Bean
     public ReactiveRedisTemplate<String, ItemCache> reactiveRedisTemplate(
             ReactiveRedisConnectionFactory connectionFactory) {
 
@@ -30,5 +31,11 @@ public class RedisConfig {
                         .build();
 
         return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
+    }
+
+    @Bean("itemRedisTemplate")
+    public ReactiveStringRedisTemplate stringRedisTemplate(
+            ReactiveRedisConnectionFactory connectionFactory) {
+        return new ReactiveStringRedisTemplate(connectionFactory);
     }
 }

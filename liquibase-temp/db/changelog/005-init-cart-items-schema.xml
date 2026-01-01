@@ -5,20 +5,28 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <changeSet id="create-carts" author="AlenaOngarbaeva">
+    <changeSet id="create-cart-items" author="AlenaOngarbaeva">
         <preConditions onFail="MARK_RAN">
             <and>
                 <not>
-                    <tableExists tableName="carts"/>
+                    <tableExists tableName="cart_items"/>
                 </not>
+                <tableExists tableName="carts"/>
+                <tableExists tableName="items"/>
                 <dbms type="postgresql"/>
             </and>
         </preConditions>
-        <createTable tableName="carts">
-            <column name="id" type="BIGINT" autoIncrement="true">
+        <createTable tableName="cart_items">
+            <column name="id" type="bigint" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="user_id" type="VARCHAR(255)">
+            <column name="cart_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_cart" references="carts(id)"/>
+            </column>
+            <column name="item_id" type="bigint">
+                <constraints nullable="false" foreignKeyName="fk_item" references="items(id)"/>
+            </column>
+            <column name="count" type="INT">
                 <constraints nullable="false"/>
             </column>
         </createTable>

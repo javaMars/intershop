@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -23,8 +24,7 @@ public class TestRedisConfig {
         return mock(ReactiveRedisConnectionFactory.class);
     }
 
-    @Bean("itemRedisTemplate")
-    @Primary
+    @Bean
     public ReactiveRedisTemplate<String, ItemCache> reactiveRedisTemplate() {
         StringRedisSerializer keySerializer = new StringRedisSerializer();
         Jackson2JsonRedisSerializer<ItemCache> valueSerializer = new Jackson2JsonRedisSerializer<>(ItemCache.class);
@@ -39,5 +39,10 @@ public class TestRedisConfig {
                 serializationContext
         );
     }
-
+    @Bean("itemRedisTemplate")
+    @Primary
+    public ReactiveStringRedisTemplate stringRedisTemplate(
+            ReactiveRedisConnectionFactory connectionFactory) {
+        return new ReactiveStringRedisTemplate(connectionFactory);
+    }
 }

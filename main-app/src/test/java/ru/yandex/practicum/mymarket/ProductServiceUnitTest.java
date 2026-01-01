@@ -8,15 +8,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.ReactiveValueOperations;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import ru.yandex.practicum.mymarket.model.Item;
-import ru.yandex.practicum.mymarket.model.ItemCache;
 import ru.yandex.practicum.mymarket.repository.ProductRepository;
 import ru.yandex.practicum.mymarket.service.ProductServiceImpl;
+
+import java.time.Duration;
 
 import static org.mockito.Mockito.when;
 
@@ -24,8 +25,8 @@ import static org.mockito.Mockito.when;
 class ProductServiceUnitTest {
 
     @Mock private ProductRepository productRepository;
-    @Mock private ReactiveRedisTemplate<String, ItemCache> itemRedisTemplate;
-    @Mock private ReactiveValueOperations<String, ItemCache> redisValueOps;
+    @Mock private ReactiveStringRedisTemplate itemRedisTemplate;
+    @Mock private ReactiveValueOperations<String, String> redisValueOps;
 
     private ProductServiceImpl productService;
 
@@ -37,8 +38,8 @@ class ProductServiceUnitTest {
     @Test
     void findById_shouldReturnFromRepository() {
         when(itemRedisTemplate.opsForValue()).thenReturn(redisValueOps);
-        when(redisValueOps.get(any())).thenReturn(Mono.empty());
-        when(redisValueOps.set(any(), any(), any())).thenReturn(Mono.empty());
+        when(redisValueOps.get(anyString())).thenReturn(Mono.empty());
+        when(redisValueOps.set(anyString(), anyString(), any(Duration.class))).thenReturn(Mono.empty());
         when(productRepository.findById(123L)).thenReturn(Mono.just(new Item(123L, "Test", "", "", 1L)));
 
         StepVerifier.create(productService.findById(123L)).expectNextCount(1).verifyComplete();
@@ -48,10 +49,13 @@ class ProductServiceUnitTest {
     void findAll_shouldCallRepository() {
         when(itemRedisTemplate.opsForValue()).thenReturn(redisValueOps);
         when(redisValueOps.get(any())).thenReturn(Mono.empty());
-        when(redisValueOps.set(any(), any(), any())).thenReturn(Mono.empty());
+        when(redisValueOps.set(anyString(), anyString(), any(Duration.class))).thenReturn(Mono.empty());
 
         Pageable pageable = PageRequest.of(0, 10);
-        when(productRepository.findIds(pageable)).thenReturn(Flux.just(1L));
+        int offset = (int) pageable.getOffset();
+        int limit = pageable.getPageSize();
+
+        when(productRepository.findIds(limit, offset)).thenReturn(Flux.just(1L));
         when(productRepository.findById(1L)).thenReturn(Mono.just(new Item(1L, "Test", "", "", 1L)));
 
         StepVerifier.create(productService.findAll(pageable)).expectNextCount(1).verifyComplete();

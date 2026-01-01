@@ -19,6 +19,8 @@ public class OrderItem {
     @Column("count")
     private int count;
 
+    public OrderItem() {}
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

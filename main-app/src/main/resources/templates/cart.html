@@ -9,6 +9,12 @@
 </head>
 
 <body class="bg-light">
+    <div th:if="${param.error == 'payment_unavailable'}" class="alert alert-danger">
+        Платежный сервис недоступен. Попробуйте позже.
+    </div>
+    <div th:if="${param.error == 'payment_failed'}" class="alert alert-danger">
+        Оплата не прошла. Заказ отменен.
+    </div>
     <div class="container p-2">
         <div class="row p-2">
             <div class="col">

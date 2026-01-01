@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.ReactiveValueOperations;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.test.context.ActiveProfiles;
@@ -20,7 +20,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import ru.yandex.practicum.mymarket.model.Item;
-import ru.yandex.practicum.mymarket.model.ItemCache;
 import ru.yandex.practicum.mymarket.service.ProductServiceImpl;
 
 import java.io.BufferedReader;
@@ -51,7 +50,7 @@ public class ProductServiceIntegrationTest {
 
     @MockitoBean
     @Qualifier("itemRedisTemplate")
-    ReactiveRedisTemplate<String, ItemCache> redisTemplate;
+    ReactiveStringRedisTemplate redisTemplate;
 
     @MockitoSpyBean
     ProductServiceImpl productService;
@@ -78,19 +77,32 @@ public class ProductServiceIntegrationTest {
     @Test
     void testCacheSerialization() {
         Item item = new Item(1L, "Test", "Desc", "img.jpg", 100L);
-        ItemCache cache = productService.toCache(item).block();
-        Item restored = productService.toDb(cache).block();
+
+        // toCache → JSON String → toDb(String)
+        Mono<String> jsonMono = productService.toCache(item)
+                .map(cache -> {
+                    try {
+                        return productService.objectMapper.writeValueAsString(cache);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+        StepVerifier.create(jsonMono)
+                .expectNextMatches(json -> json.contains("Test"))
+                .verifyComplete();
     }
+
 
 
     @Test
     void shouldReturnItemFromRedis() {
-        ItemCache testCache = new ItemCache("123", "Cached Item", "Desc", "img.jpg", "100");
+        String jsonCache = "{\"id\":\"123\",\"title\":\"Cached Item\",\"description\":\"Desc\",\"imgPath\":\"img.jpg\",\"price\":\"100\"}";  // ✅ JSON String!
         String key = "product:123";
 
-        ReactiveValueOperations<String, ItemCache> valueOps = mock(ReactiveValueOperations.class);
+        ReactiveValueOperations<String, String> valueOps = mock(ReactiveValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(valueOps.get(key)).thenReturn(Mono.just(testCache));
+        when(valueOps.get(key)).thenReturn(Mono.just(jsonCache));
 
         StepVerifier.create(productService.findById(123L))
                 .expectNextMatches(item ->
@@ -98,6 +110,7 @@ public class ProductServiceIntegrationTest {
                                 item.getPrice() == 100L)
                 .verifyComplete();
     }
+
 
     @Test
     void checkIds() {

@@ -3,6 +3,7 @@ package ru.yandex.practicum.mymarket.service;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import ru.yandex.practicum.mymarket.context.UserContext;
 import ru.yandex.practicum.mymarket.dto.ItemDto;
 import ru.yandex.practicum.mymarket.model.Cart;
 import ru.yandex.practicum.mymarket.model.CartItem;
@@ -19,17 +20,16 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
-    private final Mono<Cart> cart;
 
     public CartServiceImpl(CartRepository cartRepository, CartItemRepository cartItemRepository, ProductRepository productRepository) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
-        this.cart = cartRepository.findLastCart();
     }
 
     public Mono<Cart> findLastCart() {
-        return cartRepository.findLastCart()
+        return UserContext.getCurrentUserId()
+                .flatMap(this::findLastCartByUserId)
                 .switchIfEmpty(Mono.just(new Cart()));
     }
 
@@ -46,14 +46,17 @@ public class CartServiceImpl implements CartService {
                 );
     }
 
-    public Mono<List<ItemDto>> findCartItemsWithDetails() {
-        return findLastCart()
+    public Mono<Cart> findLastCartByUserId(String userId) {
+        return cartRepository.findLastCartByUserId(userId)
+                .switchIfEmpty(Mono.just(new Cart()));
+    }
+
+    public Mono<List<ItemDto>> findCartItemsWithDetails(String userId) {
+        return cartRepository.findLastCartByUserId(userId)
+                .switchIfEmpty(Mono.just(new Cart()))
                 .flatMapMany(cart -> {
-                    Long cartId = cart.getId();
-                    if (cartId == null) {
-                        return Flux.empty();
-                    }
-                    return cartItemRepository.findByCartId(cartId);
+                    if (cart.getId() == null) return Flux.empty();
+                    return cartItemRepository.findByCartId(cart.getId());
                 })
                 .collectList()
                 .flatMap(cartItems -> {
@@ -108,33 +111,31 @@ public class CartServiceImpl implements CartService {
     }
 
     private Mono<Cart> getCurrentCart() {
-        return
-                cartRepository.findLastCart()
-                        .switchIfEmpty(
-                                Mono.defer(() -> {
+        return UserContext.getCurrentUserId()
+                .switchIfEmpty(Mono.error(new RuntimeException("User ID не найден")))
+                .flatMap(userId ->
+                        cartRepository.findLastCartByUserId(userId)
+                                .switchIfEmpty(Mono.defer(() -> {
                                     Cart newCart = new Cart();
+                                    newCart.setUserId(userId);
                                     return cartRepository.save(newCart);
-                                })
-                        );
+                                }))
+                );
     }
 
     Mono<Void> increaseItemCount(Long itemId) {
         return getCurrentCart()
-                .flatMap(cartObj -> {
-                    Long cartId = cartObj.getId();
-
-                    return productRepository.findById(itemId)
-                            .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
-                            .flatMap(item ->
-                                    cartItemRepository.findByCartIdAndItemId(cartId, item.getId())
-                                            .switchIfEmpty(Mono.fromCallable(() -> createNewCartItem(cartId, item.getId())))
-                                            .flatMap(cartItem -> {
-                                                cartItem.setCount(cartItem.getCount() + 1);
-                                                return cartItemRepository.save(cartItem);
-                                            })
-                            );
-                })
-                .then();
+                .flatMap(cart -> productRepository.findById(itemId)
+                        .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
+                        .flatMap(item ->
+                                cartItemRepository.findByCartIdAndItemId(cart.getId(), itemId)
+                                        .defaultIfEmpty(new CartItem(cart.getId(), itemId, 0))
+                                        .flatMap(cartItem -> {
+                                            cartItem.setCount(cartItem.getCount() + 1);
+                                            return cartItemRepository.save(cartItem);
+                                        })
+                        )
+                ).then();
     }
 
     private CartItem createNewCartItem(Long cartId, Long itemId) {
@@ -146,32 +147,29 @@ public class CartServiceImpl implements CartService {
     }
 
     Mono<Void> decreaseItemCount(Long itemId) {
-        return cart.flatMap(cartObj ->
-                productRepository.findById(itemId)
+        return getCurrentCart()
+                .flatMap(cartObj -> productRepository.findById(itemId)
                         .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
-                        .flatMap(item ->
-                                cartItemRepository.findByCartIdAndItemId(cartObj.getId(), item.getId())
-                                        .defaultIfEmpty(new CartItem(cartObj.getId(), item.getId(), 0))
-                                        .flatMap(cartItem -> {
-                                            int newCount = cartItem.getCount() - 1;
-                                            if (newCount <= 0) {
-                                                return cartItemRepository.delete(cartItem);
-                                            } else {
-                                                cartItem.setCount(newCount);
-                                                return cartItemRepository.save(cartItem);
-                                            }
-                                        })
+                        .flatMap(item -> cartItemRepository.findByCartIdAndItemId(cartObj.getId(), item.getId())
+                                .defaultIfEmpty(new CartItem(cartObj.getId(), item.getId(), 0))
+                                .flatMap(cartItem -> {
+                                    int newCount = cartItem.getCount() - 1;
+                                    if (newCount <= 0) {
+                                        return cartItemRepository.delete(cartItem);
+                                    } else {
+                                        cartItem.setCount(newCount);
+                                        return cartItemRepository.save(cartItem);
+                                    }
+                                })
                         )
-        ).then();
+                ).then();
     }
 
     Mono<Void> removeItem(Long itemId) {
-        return cart.flatMap(cartObj ->
-                productRepository.findById(itemId)
+        return getCurrentCart()
+                .flatMap(cartObj -> productRepository.findById(itemId)
                         .switchIfEmpty(Mono.error(new RuntimeException("Товар не найден")))
-                        .flatMap((item ->
-                                cartItemRepository.deleteByCartIdAndItemId(cartObj.getId(), itemId))
-                        )
-        ).then();
+                        .flatMap(item -> cartItemRepository.deleteByCartIdAndItemId(cartObj.getId(), itemId))
+                ).then();
     }
 }

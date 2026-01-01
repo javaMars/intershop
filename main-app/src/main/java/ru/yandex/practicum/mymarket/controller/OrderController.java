@@ -8,6 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.client.api.DefaultApi;
 import ru.yandex.practicum.mymarket.client.model.PaymentRequest;
+import ru.yandex.practicum.mymarket.context.UserContext;
 import ru.yandex.practicum.mymarket.service.OrderService;
 
 @Controller
@@ -23,12 +24,15 @@ public class OrderController {
 
     @GetMapping("/orders")
     public Mono<String> viewAllOrders(Model model) {
-        return orderService.findAllOrders()
-                .collectList()
-                .map(orders -> {
-                    model.addAttribute("orders", orders);
-                    return "orders";
-                });
+        return UserContext.getCurrentUserId()
+                .flatMap(userId ->
+                        orderService.findOrdersByUserId(userId)
+                                .collectList()
+                                .map(orders -> {
+                                    model.addAttribute("orders", orders);
+                                    return "orders";
+                                })
+                );
     }
 
     @GetMapping("/orders/{id}")
@@ -43,25 +47,29 @@ public class OrderController {
 
     @PostMapping("/buy")
     public Mono<String> createOrder() {
-        String userId = "user123";
+        return UserContext.getCurrentUserId()
+                .flatMap(userId ->
+                        orderService.createFromCart(userId)
+                                .flatMap(orderDto -> {
+                                    PaymentRequest paymentRequest = new PaymentRequest()
+                                            .userId(userId)
+                                            .orderId(orderDto.getId().toString())
+                                            .amount(orderDto.getTotalSum().doubleValue());
 
-        return orderService.createFromCart()
-                .flatMap(orderDto -> {
-                    PaymentRequest paymentRequest = new PaymentRequest()
-                            .userId(userId)
-                            .orderId("order-" + orderDto.getId())
-                            .amount(orderDto.getTotalSum().doubleValue());
-
-                    return paymentClient.apiPaymentsPayPost(paymentRequest)
-                            .flatMap(response -> {
-                                if (response.getSuccess()) {
-                                    return Mono.just("redirect:/orders/" + orderDto.getId() + "?newOrder=true");
-                                } else {
-                                    return orderService.cancelOrder(orderDto.getId())
-                                            .then(Mono.just("redirect:/cart?error=payment_failed"));
-                                }
-                            });
-                })
-                .onErrorResume(e -> Mono.just("redirect:/cart?error=payment_unavailable"));
+                                    return paymentClient.apiPaymentsPayPost(paymentRequest)
+                                            .flatMap(response -> {
+                                                if (response.getSuccess()) {
+                                                    return orderService.clearCartAfterPayment(userId)
+                                                            .then(Mono.just("redirect:/orders/" + orderDto.getId()));
+                                                } else {
+                                                    return orderService.cancelOrder(orderDto.getId())
+                                                            .then(Mono.just("redirect:/cart/items?error=payment_failed"));
+                                                }
+                                            });
+                                })
+                )
+                .onErrorResume(e -> {
+                    return Mono.just("redirect:/cart/items?error=payment_unavailable");
+                });
     }
 }
