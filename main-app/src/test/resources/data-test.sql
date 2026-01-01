@@ -1,0 +1,13 @@
+INSERT INTO items (title, description, img_path, price, cnt) VALUES
+('Бейсболка белая', 'Очень модная бейсболка белого цвета', 'img1.jpg', 1500,0),
+('Футбольный мяч', 'Классный мяч для игры в футбол', 'img2.jpg', 4000,0),
+('Бейсбольный мяч', 'Мяч для игры в бейсбол', 'img3.jpg', 1500,0),
+('Зонтик', 'Зонтик пригодится в пасмурную погоду', 'img4.jpg', 2000,0);
+
+INSERT INTO carts (user_id) VALUES ('user123');
+
+INSERT INTO cart_items (cart_id, item_id, count) VALUES
+(1, 1, 2);
+
+INSERT INTO orders (total_sum, user_id) VALUES
+(200, 'user123');

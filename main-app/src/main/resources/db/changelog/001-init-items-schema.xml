@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="create_items_table" author="AlenaOngarbaeva">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <not>
+                    <tableExists tableName="items"/>
+                </not>
+            <dbms type="postgresql"/>
+            </and>
+        </preConditions>
+        <createTable tableName="items">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="varchar(255)"/>
+            <column name="description" type="varchar(255)"/>
+            <column name="img_path" type="varchar(255)"/>
+            <column name="price" type="bigint"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="items"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="fill_items_table" author="AlenaOngarbaeva">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="items"/>
+                <dbms type="postgresql"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM items WHERE id = 1
+                </sqlCheck>
+            </and>
+        </preConditions>
+        <insert tableName="items">
+            <column name="title" value="Бейсболка белая"/>
+            <column name="description" value="Очень модная бейсболка белого цвета"/>
+            <column name="img_path" value="img1.jpg"/>
+            <column name="price" value="1500"/>
+        </insert>
+        <insert tableName="items">
+            <column name="title" value="Футбольный мяч"/>
+            <column name="description" value="Классный мяч для игры в футбол"/>
+            <column name="img_path" value="img2.jpg"/>
+            <column name="price" value="4000"/>
+        </insert>
+        <insert tableName="items">
+            <column name="title" value="Бейсбольный мяч"/>
+            <column name="description" value="Мяч для игры в бейсбол"/>
+            <column name="img_path" value="img3.jpg"/>
+            <column name="price" value="1500"/>
+        </insert>
+        <insert tableName="items">
+            <column name="title" value="Зонтик"/>
+            <column name="description" value="Зонтик пригодится в пасмурную погоду"/>
+            <column name="img_path" value="img4.jpg"/>
+            <column name="price" value="2000"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

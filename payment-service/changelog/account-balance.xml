@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog>
+    <changeSet id="1" author="payment">
+        <createTable tableName="account_balance">
+            <column name="user_id" type="VARCHAR(50)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="balance" type="DOUBLE PRECISION"/>
+            <column name="date_update" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="payment">
+        <insert tableName="account_balance">
+            <column name="user_id" value="user123"/>
+            <column name="balance" valueNumeric="5000"/>
+            <column name="date_update" valueDate="NOW()"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>
