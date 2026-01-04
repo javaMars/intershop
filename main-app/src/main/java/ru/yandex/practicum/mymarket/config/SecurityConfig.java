@@ -84,7 +84,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/css/**", "/js/**", "/items/**", "/register",
-                                "/login", "/test-auth").permitAll()  // ✅ cart/** permitAll
+                                "/login", "/images/**").permitAll()
                         .pathMatchers("/orders/**", "/buy", "/cart/**").hasRole("USER")
                         .pathMatchers("/admin/**").hasRole("ADMIN")
                         .anyExchange().authenticated()

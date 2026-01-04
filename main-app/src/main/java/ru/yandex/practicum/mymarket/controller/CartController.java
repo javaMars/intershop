@@ -34,30 +34,13 @@ public class CartController{
         model.addAttribute("paymentError", hasPaymentError);
 
         return UserContext.getCurrentUserId()
-                .flatMap(user ->
-                        cartService.findCartItemsWithDetails(user)
-                                .map(items -> {
-                                    model.addAttribute("items", items);
-                                    long total = items.stream()
-                                            .mapToLong(i -> i.getPrice() * i.getCount())
-                                            .sum();
-                                    model.addAttribute("total", total);
-                                    return total;
-                                })
-                                .flatMap(total ->
-                                        paymentClient.apiPaymentsGetBalanceUserIdGet(user)
-                                                .map(balance -> {
-                                                    model.addAttribute("balance", balance.getBalance());
-                                                    model.addAttribute("canPay", balance.getBalance() >= total);
-                                                    return "cart";
-                                                })
-                                )
-                )
+                .flatMap(userId -> loadCartWithBalance(model, userId))
                 .onErrorResume(e -> {
                     model.addAttribute("items", Collections.emptyList());
                     model.addAttribute("total", 0L);
                     model.addAttribute("balance", 0.0);
                     model.addAttribute("canPay", false);
+                    model.addAttribute("paymentError", true);
                     return Mono.just("cart");
                 });
     }
@@ -69,31 +52,15 @@ public class CartController{
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            return Mono.just("cart/items/form");
+            model.addAttribute("paymentError", true);
+            return loadCartWithBalance(model, null);
         }
         Long itemId = form.getId();
         String action = form.getAction();
 
         return UserContext.getCurrentUserId()
-                .flatMap(userId ->
-                        cartService.handleItemAction(itemId, action)
-                                .then(cartService.findCartItemsWithDetails(userId))
-                                .map(items -> {
-                                    model.addAttribute("items", items);
-                                    long total = items.stream()
-                                            .mapToLong(i -> i.getPrice() * i.getCount())
-                                            .sum();
-                                    model.addAttribute("total", total);
-                                    return total;
-                                })
-                                .flatMap(total -> paymentClient.apiPaymentsGetBalanceUserIdGet(userId)
-                                        .map(balance -> {
-                                            model.addAttribute("balance", balance.getBalance());
-                                            model.addAttribute("canPay", balance.getBalance() >= total);
-                                            model.addAttribute("paymentError", false);
-                                            return "cart";
-                                        })
-                                )
+                .flatMap(userId -> cartService.handleItemAction(itemId, action)
+                        .then(loadCartWithBalance(model, userId))
                 )
                 .onErrorResume(e -> {
                     model.addAttribute("paymentError", true);
@@ -101,5 +68,26 @@ public class CartController{
                     model.addAttribute("balance", 0L);
                     return Mono.just("cart");
                 });
+    }
+
+    private Mono<String> loadCartWithBalance(Model model, String userId) {
+        return cartService.findCartItemsWithDetails(userId)
+                .map(items -> {
+                    model.addAttribute("items", items);
+                    long total = items.stream()
+                            .mapToLong(i -> i.getPrice() * i.getCount())
+                            .sum();
+                    model.addAttribute("total", total);
+                    return total;
+                })
+                .flatMap(total ->
+                        paymentClient.apiPaymentsGetBalanceUserIdGet(userId)
+                                .map(balance -> {
+                                    model.addAttribute("balance", balance.getBalance());
+                                    model.addAttribute("canPay", balance.getBalance() >= total);
+                                    model.addAttribute("paymentError", false);
+                                    return "cart";
+                                })
+                );
     }
 }

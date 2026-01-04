@@ -46,6 +46,7 @@ public class AuthRedirectFilter implements WebFilter {
 
     private boolean isPublicPath(String path) {
         return path.startsWith("/css") || path.startsWith("/js") ||
-                path.startsWith("/register") || path.startsWith("/items");
+                path.startsWith("/register") || path.startsWith("/items")||
+                path.startsWith("/images");
     }
 }
