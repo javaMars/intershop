@@ -15,7 +15,7 @@ import java.util.Collections;
 
 @Controller
 @RequestMapping("/cart/items")
-public class CartController {
+public class CartController{
 
     private final CartService cartService;
     private final DefaultApi paymentClient;

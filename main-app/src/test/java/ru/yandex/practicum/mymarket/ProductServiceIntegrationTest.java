@@ -78,7 +78,6 @@ public class ProductServiceIntegrationTest {
     void testCacheSerialization() {
         Item item = new Item(1L, "Test", "Desc", "img.jpg", 100L);
 
-        // toCache → JSON String → toDb(String)
         Mono<String> jsonMono = productService.toCache(item)
                 .map(cache -> {
                     try {
@@ -93,11 +92,9 @@ public class ProductServiceIntegrationTest {
                 .verifyComplete();
     }
 
-
-
     @Test
     void shouldReturnItemFromRedis() {
-        String jsonCache = "{\"id\":\"123\",\"title\":\"Cached Item\",\"description\":\"Desc\",\"imgPath\":\"img.jpg\",\"price\":\"100\"}";  // ✅ JSON String!
+        String jsonCache = "{\"id\":\"123\",\"title\":\"Cached Item\",\"description\":\"Desc\",\"imgPath\":\"img.jpg\",\"price\":\"100\"}";
         String key = "product:123";
 
         ReactiveValueOperations<String, String> valueOps = mock(ReactiveValueOperations.class);
@@ -110,7 +107,6 @@ public class ProductServiceIntegrationTest {
                                 item.getPrice() == 100L)
                 .verifyComplete();
     }
-
 
     @Test
     void checkIds() {

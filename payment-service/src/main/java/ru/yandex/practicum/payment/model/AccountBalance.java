@@ -20,5 +20,4 @@ public class AccountBalance {
 
     @Column("balance")
     private Double balance;
-
 }

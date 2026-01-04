@@ -17,5 +17,4 @@ public interface BalanceRepository extends R2dbcRepository<AccountBalance, Strin
             @Param("userId") String userId,
             @Param("amount") Double amount
     );
-
 }
