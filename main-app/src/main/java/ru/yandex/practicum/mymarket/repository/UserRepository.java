@@ -9,4 +9,5 @@ import ru.yandex.practicum.mymarket.model.User;
 public interface UserRepository extends ReactiveCrudRepository<User, Long> {
     Mono<User> findByLogin(String login);
     Mono<Boolean> existsByLogin(String login);
+
 }

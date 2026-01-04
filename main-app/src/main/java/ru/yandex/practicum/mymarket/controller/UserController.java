@@ -47,7 +47,6 @@ public class UserController {
         }
 
         return userService.register(form)
-                .doOnSuccess(user -> System.out.println("Зарегистрирован: " + user.getLogin()))
                 .then(Mono.just("redirect:/login?registered"))
                 .onErrorResume(IllegalArgumentException.class, ex -> {
                     model.addAttribute("error", ex.getMessage());

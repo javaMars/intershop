@@ -17,12 +17,15 @@ import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.ProductService;
 
 import org.springframework.data.domain.Pageable;
+import ru.yandex.practicum.mymarket.service.SecurityContextService;
+
 import java.util.*;
 
 @Controller
 @RequestMapping("/items")
 public class ProductController {
     private final ProductService productService;
+    private final SecurityContextService securityService;
     private final CartService cartService;
 
     private static final Map<String, Sort> SORT_STRATEGIES = Map.of(
@@ -30,9 +33,10 @@ public class ProductController {
             "PRICE", Sort.by("price").ascending()
     );
 
-    public ProductController(ProductService productService, CartService cartService) {
+    public ProductController(ProductService productService, CartService cartService,SecurityContextService securityService) {
         this.productService = productService;
         this.cartService = cartService;
+        this.securityService = securityService;
     }
 
     @GetMapping
@@ -69,7 +73,8 @@ public class ProductController {
                         }
                         itemsByGroup.add(partItems);
                     }
-                    return cartService.getItemCountsMap()
+                    return securityService.addSecurityAttributes(model)
+                            .then(cartService.getItemCountsMap())
                             .map(itemCountMap -> {
                                 model.addAttribute("items", itemsByGroup);
                                 model.addAttribute("paging", new PagingWrapperReactive(filteredItems.size(), pageIndex, pageSize));
@@ -96,7 +101,8 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public Mono<String> viewItem(@PathVariable Long id, Model model){
-        return productService.findById(id)
+        return securityService.addSecurityAttributes(model)
+                .then(productService.findById(id))
                 .switchIfEmpty(Mono.error( new ResponseStatusException(HttpStatus.NOT_FOUND, "Товар не найден")))
                 .flatMap(item -> cartService.getItemCountInCart(id)
                         .defaultIfEmpty(0)

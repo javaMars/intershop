@@ -17,7 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.authentication.ServerAuthenticationFailureHandler;
 import org.springframework.security.web.server.authentication.ServerAuthenticationSuccessHandler;
-import org.springframework.security.web.server.authentication.logout.RedirectServerLogoutSuccessHandler;
+import org.springframework.security.web.server.authentication.logout.ServerLogoutSuccessHandler;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.repository.UserRepository;
@@ -39,26 +39,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthRedirectFilter authRedirectFilter() {
-        return new AuthRedirectFilter();
-    }
-
-    @Bean
     public ReactiveUserDetailsService userDetailsService(UserRepository userRepository) {
         return username -> {
             return userRepository.findByLogin(username)
                     .map(CustomUserDetails::new);
         };
-    }
-
-    @Bean
-    public ReactiveAuthenticationManager authenticationManager(
-            ReactiveUserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
-        UserDetailsRepositoryReactiveAuthenticationManager authManager =
-                new UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService);
-        authManager.setPasswordEncoder(passwordEncoder);
-        return authManager;
     }
 
     @Bean
@@ -84,7 +69,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/css/**", "/js/**", "/items/**", "/register",
-                                "/login", "/images/**").permitAll()
+                                "/login", "/images/**", "/logout").permitAll()
                         .pathMatchers("/orders/**", "/buy", "/cart/**").hasRole("USER")
                         .pathMatchers("/admin/**").hasRole("ADMIN")
                         .anyExchange().authenticated()
@@ -96,7 +81,7 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessHandler(new RedirectServerLogoutSuccessHandler())
+                        .logoutSuccessHandler(logoutSuccessHandler())
                 )
                 .exceptionHandling(exceptions -> exceptions
                         .accessDeniedHandler((webFilterExchange, ex) -> {
@@ -125,6 +110,17 @@ public class SecurityConfig {
                         exchange.getResponse().getHeaders().set("Location", targetUrl);
                         return exchange.getResponse().setComplete();
                     });
+        };
+    }
+
+    @Bean
+    public ServerLogoutSuccessHandler logoutSuccessHandler() {
+        return (exchange, authentication) -> {
+            ServerWebExchange webExchange = exchange.getExchange();
+            ServerHttpResponse response = webExchange.getResponse();
+            response.setStatusCode(HttpStatus.SEE_OTHER);
+            response.getHeaders().setLocation(URI.create("/items"));
+            return response.setComplete();
         };
     }
 }

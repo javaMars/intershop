@@ -1,6 +1,6 @@
 package ru.yandex.practicum.mymarket.controller;
-import ru.yandex.practicum.mymarket.client.api.DefaultApi;
 
+import ru.yandex.practicum.mymarket.client.api.DefaultApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
