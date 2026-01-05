@@ -2,12 +2,13 @@ package ru.yandex.practicum.payment.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-import ru.yandex.practicum.payment.model.Balance;
-import ru.yandex.practicum.payment.model.PaymentRequest;
-import ru.yandex.practicum.payment.model.PaymentResponse;
+import ru.yandex.practicum.payment.model.*;
 import ru.yandex.practicum.payment.service.PaymentService;
+
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -17,18 +18,45 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @GetMapping("/getBalance/{userId}")
-    public Mono<ResponseEntity<Balance>> getBalance(@PathVariable String userId) {
+    public Mono<ResponseEntity<Balance>> getBalance(
+            @PathVariable String userId,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String clientId = jwt.getClaimAsString("client_id");
+        if (!"payment-service-client".equals(clientId)) {
+            return Mono.just(ResponseEntity.status(403).build());
+        }
+
         return paymentService.getBalance(userId)
                 .map(ResponseEntity::ok)
-                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/pay")
     public Mono<ResponseEntity<PaymentResponse>> pay(@RequestBody PaymentRequest request) {
         return paymentService.processPayment(request)
-                .map(ResponseEntity::ok)  // 200 при успехе
+                .map(ResponseEntity::ok)
                 .switchIfEmpty(Mono.just(ResponseEntity.badRequest()
-                        .body(new PaymentResponse(false, request.getUserId(), 0D, request.getOrderId()))
+                        .body(new PaymentResponse(false, request.getUserId()))
                 ));
+    }
+
+    @PostMapping("/initBalance")
+    public Mono<ResponseEntity<Balance>> initBalance(
+            @RequestBody Mono<InitBalanceRequest> requestMono,
+            @AuthenticationPrincipal Jwt jwt) {
+        String clientId = jwt.getClaimAsString("client_id");
+
+        if (!"payment-service-client".equals(clientId)) {
+            return Mono.just(ResponseEntity.status(403).build());
+        }
+
+        return requestMono
+                .flatMap(request ->
+                    paymentService.initUserBalance(request.getUserId(), request.getInitialBalance())
+                )
+                .map(ResponseEntity::ok)
+                .onErrorReturn(ResponseEntity.badRequest()
+                        .body(new Balance().userId("unknown").balance(0.0)));
     }
 }

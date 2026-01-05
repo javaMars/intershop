@@ -1,6 +1,5 @@
 package ru.yandex.practicum.mymarket.controller;
 
-import ru.yandex.practicum.mymarket.client.api.DefaultApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -10,6 +9,7 @@ import reactor.core.publisher.Mono;
 import ru.yandex.practicum.mymarket.context.UserContext;
 import ru.yandex.practicum.mymarket.dto.ItemForm;
 import ru.yandex.practicum.mymarket.service.CartService;
+import ru.yandex.practicum.mymarket.service.PaymentServiceClient;
 
 import java.util.Collections;
 
@@ -18,12 +18,12 @@ import java.util.Collections;
 public class CartController{
 
     private final CartService cartService;
-    private final DefaultApi paymentClient;
+    private final PaymentServiceClient paymentServiceClient;
 
     @Autowired
-    public CartController(CartService cartService, DefaultApi paymentClient) {
+    public CartController(CartService cartService, PaymentServiceClient paymentServiceClient) {
         this.cartService = cartService;
-        this.paymentClient = paymentClient;
+        this.paymentServiceClient = paymentServiceClient;
     }
 
     @GetMapping
@@ -81,12 +81,18 @@ public class CartController{
                     return total;
                 })
                 .flatMap(total ->
-                        paymentClient.apiPaymentsGetBalanceUserIdGet(userId)
+                        paymentServiceClient.getBalance(userId)  // НОВЫЙ метод!
                                 .map(balance -> {
                                     model.addAttribute("balance", balance.getBalance());
                                     model.addAttribute("canPay", balance.getBalance() >= total);
                                     model.addAttribute("paymentError", false);
                                     return "cart";
+                                })
+                                .onErrorResume(e -> {
+                                    model.addAttribute("paymentError", true);
+                                    model.addAttribute("balance", 0.0);
+                                    model.addAttribute("canPay", false);
+                                    return Mono.just("cart");
                                 })
                 );
     }

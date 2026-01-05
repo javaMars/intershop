@@ -16,24 +16,29 @@ public class PaymentService {
     public Mono<Balance> getBalance(String userId) {
         return balanceRepository.findByUserId(userId)
                 .switchIfEmpty(Mono.defer(() -> {
-                    AccountBalance defaultBalance = new AccountBalance(userId, 1000.0);
+                    Balance defaultBalance = new Balance(userId, 10000.0);
                     return balanceRepository.save(defaultBalance).thenReturn(defaultBalance);
                 }))
                 .map(account -> new Balance(account.getUserId(), account.getBalance()));
     }
 
     public Mono<PaymentResponse> processPayment(PaymentRequest request) {
-        return balanceRepository.findByUserId(request.getUserId())
-                .switchIfEmpty(Mono.error(new RuntimeException("Пользователь не найден")))
-                .flatMap(currentBalance -> {
-                    if (currentBalance.getBalance() < request.getAmount()) {
-                        return Mono.just(new PaymentResponse(false, request.getUserId(),
-                                currentBalance.getBalance(), request.getOrderId()));
+        return balanceRepository.atomicDecrement(request.getUserId(), request.getAmount())
+                .map(newBalance -> new PaymentResponse(true, request.getUserId()));
+    }
+
+    public Mono<Balance> initUserBalance(String userId, Double initialBalance) {
+
+        Double balanceToSet = (initialBalance != null) ? initialBalance : 10000.0;
+
+        return balanceRepository.findByUserId(userId)
+                .hasElement()
+                .flatMap(exists -> {
+                    if (exists) {
+                        return Mono.error(new IllegalStateException("Пользователь уже существует"));
                     }
-                    return balanceRepository.atomicDecrement(request.getUserId(), request.getAmount())
-                            .map(newBalance -> new PaymentResponse(true, request.getUserId(),
-                                    newBalance.getBalance(), request.getOrderId()))
-                            .switchIfEmpty(Mono.error(new RuntimeException("Ошибка списания средств")));
+                    Balance balance = new Balance(userId, balanceToSet);
+                    return balanceRepository.save(balance);
                 });
     }
 }

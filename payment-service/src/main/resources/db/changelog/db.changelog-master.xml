@@ -5,41 +5,37 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <changeSet id="create_account_balance_v1" author="AlenaOngarbaeva">
+    <changeSet id="create_balance_v1" author="AlenaOngarbaeva">
         <preConditions onFail="MARK_RAN">
             <and>
                 <not>
-                    <tableExists tableName="account_balance"/>
+                    <tableExists tableName="balance"/>
                 </not>
                 <dbms type="postgresql"/>
             </and>
         </preConditions>
-        <createTable tableName="account_balance">
+        <createTable tableName="balance">
             <column name="user_id" type="VARCHAR(50)">
                 <constraints primaryKey="true"/>
             </column>
             <column name="balance" type="DOUBLE PRECISION">
                 <constraints nullable="false"/>
             </column>
-            <column name="date_update" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
         </createTable>
     </changeSet>
-    <changeSet id="fill_account_balance" author="AlenaOngarbaeva">
+    <changeSet id="fill_balance" author="AlenaOngarbaeva">
         <preConditions onFail="MARK_RAN">
             <and>
-                <tableExists tableName="account_balance"/>
+                <tableExists tableName="balance"/>
                 <dbms type="postgresql"/>
                 <sqlCheck expectedResult="0">
-                    SELECT COUNT(*) FROM account_balance WHERE user_id = 'user123'
+                    SELECT COUNT(*) FROM balance WHERE user_id = 'user123'
                 </sqlCheck>
             </and>
         </preConditions>
-        <insert tableName="account_balance">
+        <insert tableName="balance">
             <column name="user_id" value="user123"/>
             <column name="balance" valueNumeric="5000.00"/>
-            <column name="date_update" valueDate="NOW()"/>
         </insert>
     </changeSet>
 

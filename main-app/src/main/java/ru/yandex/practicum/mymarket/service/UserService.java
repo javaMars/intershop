@@ -12,10 +12,14 @@ import ru.yandex.practicum.mymarket.repository.UserRepository;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
+    private final PaymentServiceClient paymentServiceClient;
 
-    public UserService(UserRepository userRepository, PasswordEncoder encoder) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder encoder,
+                       PaymentServiceClient paymentServiceClient) {
         this.userRepository = userRepository;
         this.encoder = encoder;
+        this.paymentServiceClient = paymentServiceClient;
     }
 
     public Mono<User> register(UserForm form) {
@@ -24,9 +28,12 @@ public class UserService {
                     if (exists) {
                         return Mono.error(new IllegalArgumentException("Логин занят"));
                     }
-                    User user = new User(form.getLogin(),
-                            encoder.encode(form.getPassword()), Role.USER);
-                    return userRepository.save(user);
+                    User user = new User(form.getLogin(), encoder.encode(form.getPassword()), Role.USER);
+                    return userRepository.save(user)
+                            .flatMap(savedUser ->
+                                    paymentServiceClient.initBalance(savedUser.getLogin(), 10000.0)
+                                            .thenReturn(savedUser)
+                            );
                 });
     }
 }

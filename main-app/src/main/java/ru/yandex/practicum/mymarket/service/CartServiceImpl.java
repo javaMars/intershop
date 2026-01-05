@@ -112,7 +112,7 @@ public class CartServiceImpl implements CartService {
 
     private Mono<Cart> getCurrentCart() {
         return UserContext.getCurrentUserId()
-                .switchIfEmpty(Mono.error(new RuntimeException("User ID не найден")))
+                .switchIfEmpty(Mono.error(new RuntimeException("Пользователь не найден")))
                 .flatMap(userId ->
                         cartRepository.findLastCartByUserId(userId)
                                 .switchIfEmpty(Mono.defer(() -> {
