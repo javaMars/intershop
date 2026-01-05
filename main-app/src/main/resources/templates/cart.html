@@ -24,6 +24,9 @@
                     </h2>
                     <a href="/orders" class="btn btn-secondary ms-auto bi bi-file-earmark-text"> Заказы</a>
                     <a href="/items" class="btn btn-secondary bi bi-arrow-left-square"> Главная</a>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary bi bi-box-arrow-right">Выход</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -52,13 +55,13 @@
         </div>
         <div class="row p-2">
             <div class="col">
+                <h2 th:text="'Итого: ' + ${total} + ' ₽'">Итого</h2>
                 <div th:if="${!paymentError}">
                     <p><strong>Баланс:</strong> <span th:text="${balance} + ' ₽'">---</span></p>
                 </div>
                 <form th:action="@{/buy}" method="post"
                       th:if="${canPay and !#lists.isEmpty(items)}">
                     <div class="hstack gap-3">
-                        <h2 th:text="'Итого: ' + ${total} + ' ₽'">Итого</h2>
                         <button class="btn btn-success ms-auto">Купить</button>
                     </div>
                 </form>

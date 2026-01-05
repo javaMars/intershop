@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
 
 <head>
     <meta charset="utf-8">
@@ -9,6 +9,12 @@
 </head>
 
 <body class="bg-light">
+<div th:if="${isAuthenticated}">
+    Вы авторизованы как: <span th:text="${username}"></span>
+</div>
+<div th:if="${!isAuthenticated}">
+    Вы — гость.
+</div>
 <form id="main">
 </form>
 <div class="container p-2">
@@ -20,6 +26,10 @@
                 </h2>
                 <a href="/orders" class="btn btn-secondary ms-auto bi bi-file-earmark-text"> Заказы</a>
                 <a href="/cart/items" class="btn btn-secondary bi bi-cart4"> Корзина</a>
+                <a th:if="${!isAuthenticated}" href="/login" class="btn btn-secondary bi bi-box-arrow-in-right"> Вход</a>
+                <form th:action="@{/logout}" th:if="${isAuthenticated}" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-secondary bi bi-box-arrow-right">Выход</button>
+                </form>
             </div>
         </div>
     </div>
@@ -62,20 +72,25 @@
                         <span class="badge text-bg-success justify-content-end" th:text="${item.price}+' руб.'"></span>
                     </h5>
                     <p class="card-text" th:text="${item.description}"></p>
-                    <form method="post" th:action="@{/items}">
-                        <div class="hstack gap-3">
-                            <input type="hidden" name="id" th:value="${item.id}">
-                            <input type="hidden" name="search" th:value="${search}">
-                            <input type="hidden" name="sort" th:value="${sort}">
-                            <input type="hidden" name="pageSize" th:value="${paging.pageSize}">
-                            <input type="hidden" name="pageNumber" th:value="${paging.pageNumber}">
-                            <button type="submit" class="btn btn-outline-secondary" name="action" value="MINUS">-</button>
-                            <span th:if="${item.id != null}" th:text="${itemCountMap[item.id]} ?: 0"></span>
-                            <span th:unless="${item.id != null}">0</span>
-                            <button type="submit" class="btn btn-outline-secondary" name="action" value="PLUS">+</button>
-                            <button type="submit" class="btn btn-warning ms-auto bi bi-cart4" name="action" value="PLUS" th:if="${item.id != null and (itemCountMap[item.id] == 0)}"></button>
-                        </div>
-                    </form>
+                    <div th:if="${isAuthenticated}" class="hstack gap-3 mt-2">
+                        <form method="post" th:action="@{/items}">
+                            <div class="hstack gap-3">
+                                <input type="hidden" name="id" th:value="${item.id}">
+                                <input type="hidden" name="search" th:value="${search}">
+                                <input type="hidden" name="sort" th:value="${sort}">
+                                <input type="hidden" name="pageSize" th:value="${paging.pageSize}">
+                                <input type="hidden" name="pageNumber" th:value="${paging.pageNumber}">
+                                <button type="submit" class="btn btn-outline-secondary" name="action" value="MINUS" th:disabled="${itemCountMap[item.id] == null or itemCountMap[item.id] == 0}">-</button>
+                                <span th:if="${item.id != null}" th:text="${itemCountMap[item.id]} ?: 0"></span>
+                                <span th:unless="${item.id != null}">0</span>
+                                <button type="submit" class="btn btn-outline-secondary" name="action" value="PLUS">+</button>
+                                <button type="submit" class="btn btn-warning ms-auto bi bi-cart4 btn-sm"
+                                        name="action" value="PLUS"
+                                        th:if="${itemCountMap[item.id] ?: 0} == 0">
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
             <div th:unless="${item.id != null and item.id > 0}">&nbsp;</div>

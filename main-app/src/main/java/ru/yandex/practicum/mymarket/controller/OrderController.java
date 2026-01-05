@@ -6,20 +6,20 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import ru.yandex.practicum.mymarket.client.api.DefaultApi;
 import ru.yandex.practicum.mymarket.client.model.PaymentRequest;
 import ru.yandex.practicum.mymarket.context.UserContext;
 import ru.yandex.practicum.mymarket.service.OrderService;
+import ru.yandex.practicum.mymarket.service.PaymentServiceClient;
 
 @Controller
 public class OrderController {
 
     private final OrderService orderService;
-    private final DefaultApi paymentClient;
+    private final PaymentServiceClient paymentServiceClient;
 
-    public OrderController(OrderService orderService, DefaultApi paymentClient) {
+    public OrderController(OrderService orderService, PaymentServiceClient paymentServiceClient) {
         this.orderService = orderService;
-        this.paymentClient = paymentClient;
+        this.paymentServiceClient = paymentServiceClient;
     }
 
     @GetMapping("/orders")
@@ -56,7 +56,7 @@ public class OrderController {
                                             .orderId(orderDto.getId().toString())
                                             .amount(orderDto.getTotalSum().doubleValue());
 
-                                    return paymentClient.apiPaymentsPayPost(paymentRequest)
+                                    return paymentServiceClient.pay(paymentRequest)
                                             .flatMap(response -> {
                                                 if (response.getSuccess()) {
                                                     return orderService.clearCartAfterPayment(userId)

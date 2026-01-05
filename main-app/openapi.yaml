@@ -1,13 +1,15 @@
 openapi: 3.0.3
 info:
   title: Payment Service API
-  description: REST API для проверки баланса и оплаты заказов
   version: 1.0.0
 
 paths:
   /api/payments/getBalance/{userId}:
     get:
+      tags:
+        - payments
       summary: Получить баланс пользователя
+      operationId: apiPaymentsGetBalanceUserIdGet
       parameters:
         - name: userId
           in: path
@@ -16,19 +18,28 @@ paths:
             type: string
       responses:
         '200':
-          description: Успешно
+          description: "Баланс пользователя"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Balance'
         '404':
-          description: Пользователь не найден
-        '500':
-          description: Ошибка сервера
+          description: "Пользователь не найден"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '403':
+          description: "Нет доступа"
 
   /api/payments/pay:
     post:
       summary: Оформить платеж
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -42,12 +53,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentResponse'
-        '400':
-          description: Недостаточно средств
-        '404':
-          description: Пользователь не найден
-        '500':
-          description: Ошибка сервера
+
+  /api/payments/initBalance:
+    post:
+      summary: Инициализировать баланс
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitBalanceRequest'
+      responses:
+        '200':
+          description: Баланс создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
 
 components:
   schemas:
@@ -92,3 +116,20 @@ components:
       required:
         - success
         - userId
+
+    InitBalanceRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        initialBalance:
+          type: number
+          format: double
+      required:
+        - userId
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

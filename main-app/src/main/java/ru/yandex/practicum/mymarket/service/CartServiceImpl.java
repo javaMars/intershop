@@ -112,7 +112,7 @@ public class CartServiceImpl implements CartService {
 
     private Mono<Cart> getCurrentCart() {
         return UserContext.getCurrentUserId()
-                .switchIfEmpty(Mono.error(new RuntimeException("User ID не найден")))
+                .switchIfEmpty(Mono.error(new RuntimeException("Пользователь не найден")))
                 .flatMap(userId ->
                         cartRepository.findLastCartByUserId(userId)
                                 .switchIfEmpty(Mono.defer(() -> {
@@ -136,14 +136,6 @@ public class CartServiceImpl implements CartService {
                                         })
                         )
                 ).then();
-    }
-
-    private CartItem createNewCartItem(Long cartId, Long itemId) {
-        CartItem newItem = new CartItem();
-        newItem.setCartId(cartId);
-        newItem.setItemId(itemId);
-        newItem.setCount(0);
-        return newItem;
     }
 
     Mono<Void> decreaseItemCount(Long itemId) {
